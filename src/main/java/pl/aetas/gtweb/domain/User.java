@@ -9,7 +9,7 @@ import java.util.List;
 
 import static java.util.Objects.requireNonNull;
 
-public class User extends AbstractEntity {
+public class User {
 
     private final String username;
     private final String firstName;
@@ -87,7 +87,8 @@ public class User extends AbstractEntity {
         requireNonNull(task);
         final boolean added = tasks.add(task);
         if (!added) {
-            throw new TaskListModificationException("Task not added to list", task.getId());
+            // TODO task used to have id which has been added as a parameter to this exception
+            throw new TaskListModificationException("Task not added to list", 666L);
         }
     }
 
@@ -100,14 +101,16 @@ public class User extends AbstractEntity {
     public void removeTask(final Task task) throws TaskListModificationException {
         final boolean removed = tasks.remove(task);
         if (!removed) {
-            throw new TaskListModificationException("Task not removed from list", task.getId());
+            // TODO task used to have id which has been added as a parameter to this exception
+            throw new TaskListModificationException("Task not removed from list", 666L);
         }
     }
 
     public void removeTag(final Tag tag) throws TagCollectionModificationException {
         final boolean removed = tags.remove(tag);
         if (!removed) {
-            throw new TagCollectionModificationException("Tag not removed from list", tag.getId());
+            // TODO task used to have id which has been added as a parameter to this exception
+            throw new TagCollectionModificationException("Tag not removed from list", 666L);
         }
     }
 

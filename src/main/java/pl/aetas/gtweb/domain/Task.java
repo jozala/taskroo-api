@@ -1,15 +1,12 @@
 package pl.aetas.gtweb.domain;
 
 import org.codehaus.jackson.annotate.JsonIgnore;
-import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 
-import javax.xml.bind.annotation.XmlTransient;
-import javax.xml.bind.annotation.XmlType;
 import java.util.*;
 
 import static java.util.Objects.requireNonNull;
 
-public class Task extends AbstractEntity {
+public class Task {
 
     private static final int MAX_SUBTASKS_LEVELS = 10;
 

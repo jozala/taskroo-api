@@ -2,8 +2,8 @@ package pl.aetas.gtweb.data;
 
 import com.mongodb.*;
 import pl.aetas.gtweb.domain.Tag;
-import pl.aetas.gtweb.domain.User;
 
+import java.util.LinkedList;
 import java.util.List;
 
 public class TagDao {
@@ -16,18 +16,24 @@ public class TagDao {
     }
 
     public List<Tag> getAllTagsByOwnerId(long ownerId) {
-        // TODO find on the web if this ownerId should be done like relational db or user should have whole hierarchy
-        DBCursor tags = tagsCollection.find(new BasicDBObject("owner_id", ownerId));
-
+        DBCursor dbTags = tagsCollection.find(new BasicDBObject("owner_id", ownerId));
+        List<Tag> tags = new LinkedList<>();
+        for (DBObject tagDbObject : dbTags) {
+            tags.add(mapDbObjectToTag(tagDbObject));
+        }
+        return tags;
     }
 
     private Tag mapDbObjectToTag(DBObject dbObject) {
-        String id = dbObject.get("_id").toString();
-        String name = dbObject.get("name").toString();
+        String name = dbObject.get("_id.name").toString();
+        String owner = dbObject.get("_id.owner_id").toString();
         String color = dbObject.get("color").toString();
         boolean isVisibleInWorkView = Boolean.parseBoolean(dbObject.get("visibleInWorkView").toString());
-        String owner = dbObject.get("owner").toString();
 
-        return new Tag(new User(), name, color, isVisibleInWorkView);
+        return new Tag.TagBuilder()
+                .name(name)
+                .color(color)
+                .visibleInWorkView(isVisibleInWorkView)
+                .build();
     }
 }

@@ -1,15 +1,17 @@
 package pl.aetas.gtweb.domain;
 
-public class Tag extends AbstractEntity {
+public class Tag {
 
     private static final long serialVersionUID = 1539838410091532347L;
 
+    private final String id;
     private final User owner;
     private final String name;
     private final String color;
     private final boolean visibleInWorkView;
 
-    public Tag(final User owner, final String name, final String color, final boolean visibleInWorkView) {
+    public Tag(String id, final User owner, final String name, final String color, final boolean visibleInWorkView) {
+        this.id = id;
         this.owner = owner;
         this.name = name;
         this.color = color;
@@ -56,7 +58,7 @@ public class Tag extends AbstractEntity {
         }
 
         public Tag build() {
-            return new Tag(owner, name, color, visibleInWorkView);
+            return new Tag(null, owner, name, color, visibleInWorkView);
         }
 
     }

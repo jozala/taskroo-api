@@ -23,10 +23,7 @@ public class TaskTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void shouldThrowExceptionWhenTryingToSetParentTaskWithTheSameIdAsBaseTask() throws Exception {
-        task.setId(33L);
-        task2.setId(33L);
-
-        task.setParentTask(task2);
+        task.setParentTask(task);
     }
 
     @Test(expected = IllegalArgumentException.class)
