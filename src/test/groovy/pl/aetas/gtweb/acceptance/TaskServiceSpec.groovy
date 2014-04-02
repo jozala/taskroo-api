@@ -1,7 +1,5 @@
-package pl.aetas.gtweb
-
+package pl.aetas.gtweb.acceptance
 import org.apache.http.client.fluent.Request
-import org.apache.http.entity.StringEntity
 import spock.lang.Specification
 
 class TaskServiceSpec extends Specification {
@@ -11,7 +9,7 @@ class TaskServiceSpec extends Specification {
         given: "something"
             true
         when: "client sends POST request to /task to create a new task"
-            Request.Post(APP_URL + "/task").body(new StringEntity("")).execute()
+            Request.Get(APP_URL + "/tasks/all").execute()
         then: "I don't care"
             true
     }

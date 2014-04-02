@@ -11,12 +11,12 @@ public class TagDao {
     private static final String TAGS_COLLECTION_NAME = "tags";
     private final DBCollection tagsCollection;
 
-    public TagDao(DB db) {
-        tagsCollection = db.getCollection(TAGS_COLLECTION_NAME);
+    public TagDao(DBCollection dbTagsCollection) {
+        tagsCollection = dbTagsCollection;
     }
 
     public List<Tag> getAllTagsByOwnerId(long ownerId) {
-        DBCursor dbTags = tagsCollection.find(new BasicDBObject("owner_id", ownerId));
+        DBCursor dbTags = tagsCollection.find(new BasicDBObject("id.owner_id", ownerId));
         List<Tag> tags = new LinkedList<>();
         for (DBObject tagDbObject : dbTags) {
             tags.add(mapDbObjectToTag(tagDbObject));
