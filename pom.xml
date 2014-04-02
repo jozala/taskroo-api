@@ -107,8 +107,6 @@
                     <includes>
                         <include>pl/aetas/gtweb/integration/**/*Test.java</include>
                         <include>pl/aetas/gtweb/acceptance/**/*Spec.java</include>
-                        <include>pl/aetas/gtweb/integration/**/*Test.groovy</include>
-                        <include>pl/aetas/gtweb/acceptance/**/*Spec.groovy</include>
                     </includes>
                 </configuration>
             </plugin>
