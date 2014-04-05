@@ -2,20 +2,20 @@ package pl.aetas.gtweb.domain;
 
 public class Tag {
 
-    private static final long serialVersionUID = 1539838410091532347L;
-
-    private final String id;
-    private final User owner;
+    private final String ownerId;
     private final String name;
     private final String color;
     private final boolean visibleInWorkView;
 
-    public Tag(String id, final User owner, final String name, final String color, final boolean visibleInWorkView) {
-        this.id = id;
-        this.owner = owner;
+    public Tag(String ownerId, final String name, final String color, final boolean visibleInWorkView) {
+        this.ownerId = ownerId;
         this.name = name;
         this.color = color;
         this.visibleInWorkView = visibleInWorkView;
+    }
+
+    public String getOwnerId() {
+        return ownerId;
     }
 
     public String getName() {
@@ -32,13 +32,13 @@ public class Tag {
 
     public static class TagBuilder {
 
-        private User owner;
+        private String ownerId;
         private String name;
         private String color;
         private Boolean visibleInWorkView;
 
-        public TagBuilder owner(final User owner) {
-            this.owner = owner;
+        public TagBuilder ownerId(String ownerId) {
+            this.ownerId = ownerId;
             return this;
         }
 
@@ -58,7 +58,7 @@ public class Tag {
         }
 
         public Tag build() {
-            return new Tag(null, owner, name, color, visibleInWorkView);
+            return new Tag(ownerId, name, color, visibleInWorkView);
         }
 
     }
@@ -68,7 +68,7 @@ public class Tag {
         final int prime = 31;
         int result = 1;
         result = prime * result + (name == null ? 0 : name.hashCode());
-        result = prime * result + (owner == null ? 0 : owner.hashCode());
+        result = prime * result + (ownerId == null ? 0 : ownerId.hashCode());
         return result;
     }
 
@@ -91,11 +91,11 @@ public class Tag {
         } else if (!name.equals(other.name)) {
             return false;
         }
-        if (owner == null) {
-            if (other.owner != null) {
+        if (ownerId == null) {
+            if (other.ownerId != null) {
                 return false;
             }
-        } else if (!owner.equals(other.owner)) {
+        } else if (!ownerId.equals(other.ownerId)) {
             return false;
         }
         return true;

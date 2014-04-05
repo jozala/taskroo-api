@@ -8,9 +8,8 @@ import java.net.UnknownHostException;
 
 public class MongoConnector {
 
-    public DB getDatabase() throws UnknownHostException {
+    public DB getDatabase(String dbName) throws UnknownHostException {
         String mongoURIString = "mongodb://localhost";
-        String dbName = "gtweb";
 
         final MongoClient mongoClient = new MongoClient(new MongoClientURI(mongoURIString));
         return mongoClient.getDB(dbName);

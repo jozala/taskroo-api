@@ -45,7 +45,7 @@ public class TagDaoTest {
         when(dbCursor.next()).thenReturn(tagDbObject);
         when(tagsCollection.find(any(BasicDBObject.class))).thenReturn(dbCursor);
 
-        List<Tag> tags = tagDao.getAllTagsByOwnerId(123L);
+        List<Tag> tags = tagDao.getAllTagsByOwnerId("userLogin");
 
         Tag expectedTag = new Tag.TagBuilder().name("tagName").color("white").visibleInWorkView(true).build();
         assertThat(tags).contains(expectedTag);

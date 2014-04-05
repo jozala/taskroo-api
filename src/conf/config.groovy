@@ -1,3 +1,3 @@
-withConfig(configuration) {
-    ast(groovy.transform.CompileStatic)
-}
+//withConfig(configuration) {
+//    ast(groovy.transform.CompileStatic)
+//}
