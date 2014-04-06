@@ -1,7 +1,7 @@
 package pl.aetas.gtweb.domain;
 
 public enum Role {
-    ROLE_ADMIN(0), ROLE_USER(1);
+    ADMIN(0), USER(1);
 
     private final int intValue;
 

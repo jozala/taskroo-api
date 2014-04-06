@@ -23,7 +23,7 @@ public class UserTest {
         String firstname = "foo";
         String lastname = "bar";
         String password = "123456";
-        Role role = Role.ROLE_ADMIN;
+        Role role = Role.ADMIN;
         user = new User.UserBuilder().username(username).email(email).firstName(firstname).lastName(lastname)
                 .password(password).role(role).setEnabled(true).build();
     }

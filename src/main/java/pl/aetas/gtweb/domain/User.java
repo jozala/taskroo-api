@@ -3,32 +3,31 @@ package pl.aetas.gtweb.domain;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
+import java.security.Principal;
+import java.util.*;
 
 import static java.util.Objects.requireNonNull;
 
-public class User {
+public class User implements Principal {
 
     private final String username;
     private final String firstName;
     private final String lastName;
     private final String email;
     private final String password;
-    private final Role role;
+    private final Set<Role> roles;
     private final List<Task> tasks;
     private final UserTags tags;
     private final boolean enabled;
 
-    private User(final String username, final String email, final String firstName, final String lastName, final String password, final Role role,
+    private User(final String username, final String email, final String firstName, final String lastName, final String password, final Set<Role> roles,
                  final boolean enabled) {
         this.username = username;
         this.email = email;
         this.firstName = firstName;
         this.lastName = lastName;
         this.password = password;
-        this.role = role;
+        this.roles = roles;
         this.tasks = new LinkedList<Task>();
         this.tags = new UserTags();
         this.enabled = enabled;
@@ -43,13 +42,13 @@ public class User {
     }
 
     /**
-     * Returns user's role
+     * Returns user's roles
      *
-     * @return user's role
+     * @return user's roles
      */
 
-    public Role getRole() {
-        return role;
+    public Set<Role> getRoles() {
+        return roles;
     }
 
     public String getFirstName() {
@@ -119,6 +118,11 @@ public class User {
         return tags.getTag(tagName);
     }
 
+    @Override
+    public String getName() {
+        return getUsername();
+    }
+
     public static class UserBuilder {
 
         private final Logger logger = LogManager.getLogger(UserBuilder.class);
@@ -128,7 +132,7 @@ public class User {
         private String firstName;
         private String lastName;
         private String password;
-        private Role role;
+        private Set<Role> roles = new HashSet<>();
         private boolean enabled;
 
         public UserBuilder username(final String username) {
@@ -159,7 +163,7 @@ public class User {
         }
 
         public UserBuilder role(final Role role) {
-            this.role = role;
+            this.roles.add(role);
             return this;
         }
 
@@ -174,7 +178,7 @@ public class User {
             this.firstName = user.getFirstName();
             this.lastName = user.getLastName();
             this.password = user.getPassword();
-            this.role = user.getRole();
+            this.roles = new HashSet<>(user.getRoles());
             this.enabled = user.isEnabled();
             return this;
         }
@@ -185,8 +189,8 @@ public class User {
             requireNonNull(firstName, "First name has to be specified first. Actual [" + firstName + "]");
             requireNonNull(lastName, "Last name has to be specified first. Actual [" + lastName + "]");
             requireNonNull(password, "Password has to be specified first. Actual [" + password + "]");
-            requireNonNull(role, "Role has to be specified first. Actual [" + role + "]");
-            return new User(username, email, firstName, lastName, password, role, enabled);
+            requireNonNull(roles, "Roles has to be specified first. Actual [" + roles + "]");
+            return new User(username, email, firstName, lastName, password, roles, enabled);
         }
 
     }
