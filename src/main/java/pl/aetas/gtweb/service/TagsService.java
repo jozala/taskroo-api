@@ -1,9 +1,10 @@
 package pl.aetas.gtweb.service;
 
-import pl.aetas.gtweb.data.MongoConnector;
+import org.springframework.stereotype.Component;
 import pl.aetas.gtweb.data.TagDao;
 import pl.aetas.gtweb.domain.Tag;
 
+import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -12,13 +13,15 @@ import javax.ws.rs.core.MediaType;
 import java.net.UnknownHostException;
 import java.util.List;
 
+@Component
 @Path("tags")
 public class TagsService {
 
     private final TagDao tagDao;
 
-    public TagsService() throws UnknownHostException {
-        this.tagDao = new TagDao(new MongoConnector().getDatabase("gtweb").getCollection("tags"));
+    @Inject
+    public TagsService(TagDao tagDao) throws UnknownHostException {
+        this.tagDao = tagDao;
     }
 
     @GET

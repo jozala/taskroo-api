@@ -15,7 +15,7 @@ class TagDaoTest extends GroovyTestCase {
     DBCollection tagsCollection;
 
     TagDaoTest() {
-        DB db = new MongoConnector().getDatabase("gtweb-integration-tests-db")
+        DB db = new MongoConnector("mongodb://localhost").getDatabase("gtweb-integration-tests-db")
         tagsCollection = db.getCollection("tags")
         tagDao = new TagDao(tagsCollection)
     }

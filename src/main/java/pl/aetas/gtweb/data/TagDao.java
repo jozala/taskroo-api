@@ -4,22 +4,22 @@ import com.mongodb.DBCollection;
 import com.mongodb.DBCursor;
 import com.mongodb.DBObject;
 import com.mongodb.QueryBuilder;
+import org.springframework.stereotype.Repository;
 import pl.aetas.gtweb.domain.Tag;
 
 import javax.inject.Inject;
-import javax.inject.Singleton;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-@Singleton
+@Repository
 public class TagDao {
 
     private final DBCollection tagsCollection;
 
     @Inject
-    public TagDao(DBCollection dbTagsCollection) {
-        tagsCollection = dbTagsCollection;
+    public TagDao(DBCollection tagsCollection) {
+        this.tagsCollection = tagsCollection;
     }
 
     public List<Tag> getAllTagsByOwnerId(String ownerId) {
