@@ -135,6 +135,14 @@ public class User implements Principal {
         private Set<Role> roles = new HashSet<>();
         private boolean enabled;
 
+        private UserBuilder() {
+            // use factory method start() instead
+        }
+
+        public static UserBuilder start() {
+            return new UserBuilder();
+        }
+
         public UserBuilder username(final String username) {
 
             this.username = username;

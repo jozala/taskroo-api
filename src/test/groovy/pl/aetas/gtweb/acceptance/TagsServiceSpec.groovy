@@ -15,7 +15,7 @@ class TagsServiceSpec extends AcceptanceTestBase {
             prepareTestData()
             def sessionId = userIsLoggedIn("owner1Login")
         when: "client sends POST request to /task to create a new task"
-            HttpResponse response = Request.Get(APP_URL + "/tags/all").addHeader("session-id", sessionId).execute().returnResponse()
+            HttpResponse response = Request.Get(APP_URL + "/tags").addHeader("session-id", sessionId).execute().returnResponse()
         then: "Response should be 200 and contains all tags of specified user"
         println response.entity.content.toString()
             assert response.statusLine.statusCode == 200

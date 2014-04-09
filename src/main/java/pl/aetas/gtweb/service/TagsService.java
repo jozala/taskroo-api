@@ -27,7 +27,6 @@ public class TagsService {
     }
 
     @GET
-    @Path("all")
     @Produces(MediaType.APPLICATION_JSON)
     public List<Tag> retrieveTasks(@Context SecurityContext sc) {
         String userId = sc.getUserPrincipal().getName();
