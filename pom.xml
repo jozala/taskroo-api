@@ -260,4 +260,15 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <repositories>
+        <repository>
+            <id>gtweb-mongo-connector-mvn-repo</id>
+            <url>https://raw.github.com/maniekq/gtweb-mongo-connector/mvn-repo/</url>
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+            </snapshots>
+        </repository>
+    </repositories>
 </project>
