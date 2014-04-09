@@ -1,7 +1,7 @@
 package pl.aetas.gtweb.acceptance
 import com.mongodb.DB
 import com.mongodb.DBCollection
-import pl.aetas.gtweb.data.MongoConnector
+import pl.aetas.gtweb.mongo.MongoConnector
 import spock.lang.Specification
 
 abstract class AcceptanceTestBase extends Specification {

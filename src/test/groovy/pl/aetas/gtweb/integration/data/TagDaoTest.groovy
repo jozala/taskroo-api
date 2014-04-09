@@ -3,9 +3,9 @@ package pl.aetas.gtweb.integration.data
 import com.mongodb.BasicDBObject
 import com.mongodb.DB
 import com.mongodb.DBCollection
-import pl.aetas.gtweb.data.MongoConnector
 import pl.aetas.gtweb.data.TagDao
 import pl.aetas.gtweb.domain.Tag
+import pl.aetas.gtweb.mongo.MongoConnector
 
 class TagDaoTest extends GroovyTestCase {
 

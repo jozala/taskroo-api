@@ -134,6 +134,13 @@
     </dependencyManagement>
 
     <dependencies>
+        <!-- GTWeb -->
+        <dependency>
+            <groupId>pl.aetas.gtweb</groupId>
+            <artifactId>gtweb-mongo-connector</artifactId>
+            <version>0.3.0-SNAPSHOT</version>
+        </dependency>
+
         <!-- Jersey -->
         <dependency>
             <groupId>org.glassfish.jersey.containers</groupId>
