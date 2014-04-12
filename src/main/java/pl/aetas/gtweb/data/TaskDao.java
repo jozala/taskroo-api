@@ -34,6 +34,7 @@ public class TaskDao {
                 .append("finished", task.isFinished())
                 .append("subtasks", getSubtasksIds(task.getSubtasks()))
                 .append("owner_id", task.getOwnerId())
+                // TODO keeping tags by names here means that when changing tags names it will have to be changes in every task
                 .append("tags", getTagsNames(task.getTags()))
                 .append("ancestors", getAncestorsIds(task.getParentTask()))
                 .get();

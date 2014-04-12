@@ -69,4 +69,7 @@ class TasksServiceSpec extends AcceptanceTestBase {
     void createTagInDb(String ownerId, String name, String color, boolean visibleInWorkView) {
         tagsCollection.insert(new BasicDBObject([_id: [name: name, owner_id: ownerId, ], color: color, visible_in_work_view: visibleInWorkView]))
     }
+
+    // TODO test if task is given with existing tags
+
 }

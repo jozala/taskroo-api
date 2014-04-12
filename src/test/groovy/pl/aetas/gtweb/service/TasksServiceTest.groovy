@@ -92,4 +92,6 @@ class TasksServiceTest extends Specification {
         1 * taskDao.insert({ it.getOwnerId() == 'mariusz' }) >> task
 
     }
+
+    // TODO test if task is given with existing tags
 }
