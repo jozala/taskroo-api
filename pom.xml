@@ -48,6 +48,7 @@
                     <scanIntervalSeconds>10</scanIntervalSeconds>
                     <stopPort>8005</stopPort>
                     <stopKey>STOP</stopKey>
+                    <stopWait>5</stopWait>
                 </configuration>
                 <executions>
                     <execution>
@@ -128,7 +129,7 @@
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.6.4.201312101107</version>
+                <version>0.7.0.201403182114</version>
                 <executions>
                     <execution>
                         <id>prepare-agent</id>
