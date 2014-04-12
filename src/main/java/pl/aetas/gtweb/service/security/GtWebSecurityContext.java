@@ -27,7 +27,7 @@ public class GtWebSecurityContext implements SecurityContext {
     public boolean isUserInRole(String role) {
         if (null == session) {
             // TODO find more about returning WWW-Authenticate: Basic realm="insert realm"
-            Response denied = Response.status(Response.Status.FORBIDDEN).entity("Permission Denied").build();
+            Response denied = Response.status(Response.Status.FORBIDDEN).build();
             throw new WebApplicationException(denied);
         }
         return user.getRoles().contains(Role.valueOf(role.toUpperCase()));
