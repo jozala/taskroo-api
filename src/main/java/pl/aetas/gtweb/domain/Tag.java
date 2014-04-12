@@ -1,13 +1,18 @@
 package pl.aetas.gtweb.domain;
 
+import org.codehaus.jackson.annotate.JsonCreator;
+import org.codehaus.jackson.annotate.JsonProperty;
+
 public class Tag {
 
-    private final String ownerId;
+    private String ownerId;
     private final String name;
     private final String color;
     private final boolean visibleInWorkView;
 
-    public Tag(String ownerId, final String name, final String color, final boolean visibleInWorkView) {
+    @JsonCreator
+    public Tag(@JsonProperty("ownerId") String ownerId, @JsonProperty("name") String name,
+               @JsonProperty("color") String color, @JsonProperty("visibleInWorkView") boolean visibleInWorkView) {
         this.ownerId = ownerId;
         this.name = name;
         this.color = color;
@@ -16,6 +21,10 @@ public class Tag {
 
     public String getOwnerId() {
         return ownerId;
+    }
+
+    public void setOwnerId(String ownerId) {
+        this.ownerId = ownerId;
     }
 
     public String getName() {

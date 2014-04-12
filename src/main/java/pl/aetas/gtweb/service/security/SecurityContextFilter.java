@@ -1,7 +1,7 @@
 package pl.aetas.gtweb.service.security;
 
 import pl.aetas.gtweb.data.SessionDao;
-import pl.aetas.gtweb.data.UserDao;
+import pl.aetas.gtweb.domain.Role;
 import pl.aetas.gtweb.domain.User;
 
 import javax.annotation.Priority;
@@ -11,24 +11,24 @@ import javax.ws.rs.container.ContainerRequestContext;
 import javax.ws.rs.container.ContainerRequestFilter;
 import javax.ws.rs.ext.Provider;
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
 
-@Priority(Priorities.AUTHENTICATION)
+@Priority(Priorities.AUTHORIZATION)
 @Provider
 public class SecurityContextFilter implements ContainerRequestFilter {
 
     private final SessionDao sessionDao;
 
-    private final UserDao userDao;
-
     @Inject
-    public SecurityContextFilter(SessionDao sessionDao, UserDao userDao) {
+    public SecurityContextFilter(SessionDao sessionDao) {
         this.sessionDao = sessionDao;
-        this.userDao = userDao;
     }
 
     @Override
     public void filter(ContainerRequestContext requestContext) throws IOException {
-        final String sessionId = requestContext.getHeaderString("session-id");
+        // TODO this should use authorization header instead of session-id header
+        final String sessionId = requestContext.getHeaderString("Session-Id");
 
         User user = null;
         Session session = null;
@@ -37,7 +37,10 @@ public class SecurityContextFilter implements ContainerRequestFilter {
             session = sessionDao.findOne(sessionId);
 
             if (null != session) {
-                user = userDao.findOne(session.getUserId());
+                // TODO temporary solution to set roles. Roles should be saved in the session (whole User object should be saved there).
+                Set<Role> roles = new HashSet<>();
+                roles.add(Role.USER);
+                user = new User(session.getUserId(), roles);
             }
         }
 

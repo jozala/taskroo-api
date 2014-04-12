@@ -3,7 +3,6 @@ package pl.aetas.gtweb.data;
 import com.mongodb.DBCollection;
 import com.mongodb.DBObject;
 import com.mongodb.QueryBuilder;
-import org.bson.types.ObjectId;
 import org.springframework.stereotype.Repository;
 import pl.aetas.gtweb.service.security.Session;
 
@@ -22,7 +21,7 @@ public class SessionDao {
 
     // TODO create Session always with TTL for 30 minutes
     public Session findOne(String sessionId) {
-        DBObject sessionDbObject = sessionsCollection.findOne(QueryBuilder.start("_id").is(new ObjectId(sessionId)).get());
+        DBObject sessionDbObject = sessionsCollection.findOne(QueryBuilder.start("_id").is(sessionId).get());
         if (sessionDbObject == null) {
             return null;
         }

@@ -1,28 +1,27 @@
 package pl.aetas.gtweb.acceptance
 import com.mongodb.BasicDBObject
-import groovy.json.JsonSlurper
-import org.apache.http.HttpResponse
-import org.apache.http.client.fluent.Request
+import com.mongodb.QueryBuilder
+import groovyx.net.http.HttpResponseDecorator
 
 class TagsServiceSpec extends AcceptanceTestBase {
 
     def cleanup() {
-        tagsCollection.drop()
+        tagsCollection.remove(QueryBuilder.start('_id.owner_id').in(['owner1Login', 'owner2Login', 'owner3Login']).get())
+        sessionCollection.remove(QueryBuilder.start('user_id').is('owner1Login').get())
     }
 
     def "should return all tags of the specified user in the JSON format and status code 200"() {
         given: "tags of the specified user exists in the DB"
-            prepareTestData()
-            def sessionId = userIsLoggedIn("owner1Login")
+        prepareTestData()
+        def sessionId = createSessionWithUser('owner1Login')
         when: "client sends POST request to /task to create a new task"
-            HttpResponse response = Request.Get(APP_URL + "/tags").addHeader("session-id", sessionId).execute().returnResponse()
+        HttpResponseDecorator response = client.get(path: 'tags', headers: ['Session-Id': sessionId])
         then: "Response should be 200 and contains all tags of specified user"
-        println response.entity.content.toString()
-            assert response.statusLine.statusCode == 200
-            assert new JsonSlurper().parseText(response.entity.content.getText()) ==
-                    [[ownerId: 'owner1Login', name: 'tag1OfOwner1', color: 'blue', visibleInWorkView: true],
-                     [ownerId: 'owner1Login', name: 'tag2OfOwner1', color: 'white', visibleInWorkView: false],
-                     [ownerId: 'owner1Login', name: 'tag3OfOwner1', color: 'black', visibleInWorkView: false]]
+        response.status == 200
+        response.data ==
+                [[ownerId: 'owner1Login', name: 'tag1OfOwner1', color: 'blue', visibleInWorkView: true],
+                 [ownerId: 'owner1Login', name: 'tag2OfOwner1', color: 'white', visibleInWorkView: false],
+                 [ownerId: 'owner1Login', name: 'tag3OfOwner1', color: 'black', visibleInWorkView: false]]
     }
 
 
@@ -35,13 +34,6 @@ class TagsServiceSpec extends AcceptanceTestBase {
         tagMaps << [_id: [name: 'tag3OfOwner1', owner_id: 'owner1Login'], color: 'black', visibleInWorkView: false]
 
         tagMaps.each { tagsCollection.insert(new BasicDBObject(it)) }
-    }
-
-    private String userIsLoggedIn(String username) {
-        def sessionMap = [user_id: username, active: true, secure: true]
-        def sessionObject = new BasicDBObject(sessionMap)
-        sessionCollection.insert(sessionObject)
-        return sessionObject.get('_id')
     }
 
 

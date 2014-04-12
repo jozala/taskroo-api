@@ -1,9 +1,6 @@
 package pl.aetas.gtweb.data;
 
-import com.mongodb.DBCollection;
-import com.mongodb.DBCursor;
-import com.mongodb.DBObject;
-import com.mongodb.QueryBuilder;
+import com.mongodb.*;
 import org.springframework.stereotype.Repository;
 import pl.aetas.gtweb.domain.Tag;
 
@@ -14,6 +11,11 @@ import java.util.Map;
 
 @Repository
 public class TagDao {
+
+    public static final String NAME_KEY = "name";
+    public static final String OWNER_ID_KEY = "owner_id";
+    public static final String COLOR_KEY = "color";
+    public static final String VISIBLE_IN_WORK_VIEW_KEY = "visibleInWorkView";
 
     private final DBCollection tagsCollection;
 
@@ -32,10 +34,10 @@ public class TagDao {
     }
 
     private Tag mapDbObjectToTag(DBObject dbObject) {
-        String name = ((Map)dbObject.get("_id")).get("name").toString();
-        String ownerId = ((Map)dbObject.get("_id")).get("owner_id").toString();
-        String color = dbObject.get("color").toString();
-        boolean isVisibleInWorkView = Boolean.parseBoolean(dbObject.get("visibleInWorkView").toString());
+        String name = ((Map)dbObject.get("_id")).get(NAME_KEY).toString();
+        String ownerId = ((Map)dbObject.get("_id")).get(OWNER_ID_KEY).toString();
+        String color = dbObject.get(COLOR_KEY).toString();
+        boolean isVisibleInWorkView = Boolean.parseBoolean(dbObject.get(VISIBLE_IN_WORK_VIEW_KEY).toString());
 
         return new Tag.TagBuilder()
                 .name(name)
@@ -43,5 +45,15 @@ public class TagDao {
                 .color(color)
                 .visibleInWorkView(isVisibleInWorkView)
                 .build();
+    }
+
+    public boolean exists(Tag tag) {
+        DBObject query = QueryBuilder.start("_id").is(createKey(tag.getName(), tag.getOwnerId())).get();
+        long count = tagsCollection.count(query);
+        return count > 0;
+    }
+
+    private DBObject createKey(String name, String ownerId) {
+        return new BasicDBObject(NAME_KEY, name).append(OWNER_ID_KEY, ownerId);
     }
 }

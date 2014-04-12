@@ -1,47 +1,57 @@
 package pl.aetas.gtweb.integration.data
-
 import com.mongodb.BasicDBObject
-import com.mongodb.DB
-import com.mongodb.DBCollection
 import pl.aetas.gtweb.data.TagDao
 import pl.aetas.gtweb.domain.Tag
-import pl.aetas.gtweb.mongo.MongoConnector
 
-class TagDaoTest extends GroovyTestCase {
+class TagDaoTest extends IntegrationTestBase {
 
-    // SUT
     TagDao tagDao;
 
-    DBCollection tagsCollection;
-
-    TagDaoTest() {
-        DB db = new MongoConnector("mongodb://localhost").getDatabase("gtweb-integration-tests-db")
-        tagsCollection = db.getCollection("tags")
+    void setup() {
         tagDao = new TagDao(tagsCollection)
-    }
-
-    @Override
-    void setUp() {
+        tagsCollection.drop()
         prepareTestData()
     }
 
-    @Override
-    void tearDown() {
+    void cleanup() {
         tagsCollection.drop()
     }
 
-    void testShouldRetrieveTagsForSpecifiedUser() {
-        List<Tag> tags = tagDao.getAllTagsByOwnerId('owner1Login')
-        assert tags.every { it.getName().contains('OfOwner1')}
+    def "should retrieve tags for specified user"() {
+        when:
+        def tags = tagDao.getAllTagsByOwnerId('owner1Login')
+        then:
+        tags.every { it.name.contains('OfOwner1')}
     }
 
-    void testShouldMapObjectFromDbToTagObject() {
+    def "should map object from db to tag obejct"() {
+        when:
         def tags = tagDao.getAllTagsByOwnerId('owner2Login')
-        def tag = tags.first();
-        assert tag.name == 'tag1OfOwner2'
-        assert tag.ownerId == 'owner2Login'
-        assert tag.color == 'pink'
-        assert tag.isVisibleInWorkView()
+        def tag = tags.first()
+        then:
+        tag.name == 'tag1OfOwner2'
+        tag.ownerId == 'owner2Login'
+        tag.color == 'pink'
+        tag.isVisibleInWorkView()
+    }
+
+    def "should return true when tags exists for specified owner"() {
+        given:
+        def tag = new Tag('owner2Login', 'tag1OfOwner2', 'pink', true)
+        when:
+        def tagExists = tagDao.exists(tag)
+        then:
+        tagExists
+    }
+
+    def "should return false when tags does not exist for specified owner"() {
+        given:
+        def tag = new Tag('owner2Login', 'nonExistingTagName', 'black', true)
+        when:
+        def tagExists = tagDao.exists(tag)
+        then:
+        !tagExists
+
     }
 
     private void prepareTestData() {

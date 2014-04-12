@@ -1,126 +1,85 @@
 package pl.aetas.gtweb.domain;
 
+import org.codehaus.jackson.annotate.JsonCreator;
 import org.codehaus.jackson.annotate.JsonIgnore;
+import org.codehaus.jackson.annotate.JsonProperty;
 
 import java.util.*;
-
-import static java.util.Objects.requireNonNull;
 
 public class Task {
 
     private static final int MAX_SUBTASKS_LEVELS = 10;
 
-    private static final long serialVersionUID = 1032323894884580197L;
+    private String id;
+    @JsonIgnore
+    private String ownerId;
+    private final String title;
+    private final String description;
+    private final Set<Tag> tags;
     private final List<Task> subtasks;
-    private final TaskTags tags;
+    private final boolean finished;
     private final Date createdDate;
-    private String title;
-    private String description;
-    private boolean finished;
     @JsonIgnore
-    private User owner;
-    @JsonIgnore
-    private Task parentTask;
-    private Date startingOn;
-    private Date dueDate;
-    private Date closedDate;
+    private final Task parentTask;
+    private final Date startDate;
+    private final Date dueDate;
+    private final Date closedDate;
 
-
-    public Task(final String title, final String description, final boolean finished, final User owner,
-                final Task parentTask, final Date startingOn, final Date dueDate, final Date closedDate,
-                final Date createdDate) {
-
-        this.title = requireNonNull(title);
+    @JsonCreator
+    private Task(@JsonProperty("id") String id, @JsonProperty("ownerId") String ownerId,
+                 @JsonProperty("title") String title, @JsonProperty("description") String description,
+                 @JsonProperty("tags") Set<Tag> tags, @JsonProperty("subtasks") List<Task> subtasks,
+                 @JsonProperty("finished") boolean finished, @JsonProperty("closedDate") Date closedDate,
+                 @JsonProperty("createdDate") Date createdDate, @JsonProperty("startDate") Date startDate,
+                 @JsonProperty("dueDate") Date dueDate, @JsonProperty("parentTask") Task parentTask) {
+        this.id = id;
+        this.ownerId = ownerId;
         this.description = description;
+        this.title = title;
+        this.tags = tags;
+        this.subtasks = subtasks;
         this.finished = finished;
-        this.subtasks = new LinkedList<>();
-        this.parentTask = parentTask;
-        this.tags = new TaskTags();
-        this.startingOn = startingOn;
-        this.dueDate = dueDate;
         this.closedDate = closedDate;
-        this.owner = owner;
         this.createdDate = createdDate;
+        this.startDate = startDate;
+        this.dueDate = dueDate;
+        this.parentTask = parentTask;
+    }
 
+    public void setId(String id) {
+        this.id = id;
     }
 
     public String getTitle() {
         return title;
     }
 
-    public void setTitle(final String title) {
-        this.title = requireNonNull(title);
-    }
-
     public String getDescription() {
         return description;
     }
 
-    public void setDescription(final String description) {
-        this.description = description;
-    }
-
-    public boolean getFinished() {
+    public boolean isFinished() {
         return finished;
     }
 
-    public void setFinished(final boolean finished) {
-        this.finished = finished;
-    }
-
-    public Task getParentTask() {
-        return parentTask;
-    }
-
-    /**
-     * Sets parent task of this task. If it is null than this task is at the top.
-     *
-     * @param parentTask task which is parent of this task or null if this task should has no parent
-     */
-    public void setParentTask(Task parentTask) {
-        if (this.equals(parentTask)) {
-            throw new IllegalArgumentException("Cannot set the task as its own parent");
-        }
-        if (isTaskInSubtasksHierarchy(parentTask)) {
-            throw new IllegalArgumentException("Cannot set the task subtask as its parent");
-        }
-        this.parentTask = parentTask;
-    }
-
-    public Date getStartingOn() {
-        return startingOn;
-    }
-
-    public void setStartingOn(final Date startingOn) {
-        this.startingOn = startingOn;
+    public Date getStartDate() {
+        return startDate;
     }
 
     public Date getDueDate() {
         return dueDate;
     }
 
-    public void setDueDate(final Date dueDate) {
-        this.dueDate = dueDate;
-    }
-
     public Date getClosedDate() {
         return closedDate;
-    }
-
-    public void setClosedDate(final Date closedDate) {
-        this.closedDate = closedDate;
     }
 
     public Date getCreatedDate() {
         return createdDate;
     }
 
-    public User getOwner() {
-        return owner;
-    }
-
-    public void setOwner(User owner) {
-        this.owner = requireNonNull(owner);
+    public String getOwnerId() {
+        return ownerId;
     }
 
     public List<Task> getSubtasks() {
@@ -128,50 +87,11 @@ public class Task {
     }
 
     public Set<Tag> getTags() {
-        return tags.getTags();
+        return Collections.unmodifiableSet(tags);
     }
 
-    /**
-     * Adds tag to this task's tags
-     *
-     * @param tag to add to this task
-     * @return true if this task did not already contain the specified tag
-     */
-    public boolean addTag(Tag tag) {
-        requireNonNull(tag);
-        return tags.add(tag);
-    }
-
-    public void addTags(final Set<Tag> tagsSet) {
-        tags.addNonExistingTags(tagsSet);
-    }
-
-    /**
-     * Removes given tag from task
-     *
-     * @param tag to remove from task
-     * @return true if this set contained the specified tag
-     */
-    public boolean removeTag(final Tag tag) {
-        requireNonNull(tag);
-        return tags.remove(tag);
-    }
-
-    public void addSubtask(final Task task) {
-        requireNonNull(task);
-        task.setParentTask(this);
-        subtasks.add(task);
-    }
-
-    /**
-     * Removes given subtask from this task
-     *
-     * @param task to remove from task's subtasks list
-     * @return true if this task contained the specified subtask
-     */
-    public boolean removeSubtask(final Task task) {
-        requireNonNull(task);
-        return subtasks.remove(task);
+    public Task getParentTask() {
+        return parentTask;
     }
 
     public boolean isTaskInSubtasksHierarchy(final Task task) {
@@ -194,13 +114,117 @@ public class Task {
             return Collections.emptyList();
         }
 
-        final List<Task> allHierarchySubtasks = new LinkedList<>();
-        allHierarchySubtasks.addAll(subtasksFromLevel);
+        final List<Task> wholeHierarchySubtasks = new LinkedList<>();
+        wholeHierarchySubtasks.addAll(subtasksFromLevel);
         for (final Task subtask : subtasksFromLevel) {
-            allHierarchySubtasks.addAll(subtask.getAllTaskInSubtasksHierarchy(level + 1));
+            wholeHierarchySubtasks.addAll(subtask.getAllTaskInSubtasksHierarchy(level + 1));
         }
 
-        return allHierarchySubtasks;
+        return wholeHierarchySubtasks;
     }
 
+    public String getId() {
+        return id;
+    }
+
+    public void setOwnerId(String ownerId) {
+        this.ownerId = ownerId;
+    }
+
+
+    public static class TaskBuilder {
+
+        private String id;
+        private String ownerId;
+        private String title;
+        private String description;
+        private Set<Tag> tags;
+        private List<Task> subtasks;
+        private boolean finished;
+        private Date createdDate;
+        private Date startDate;
+        private Date dueDate;
+        private Date closedDate;
+        private Task parentTask;
+
+        private TaskBuilder() {
+            tags = new HashSet<>();
+            subtasks = new LinkedList<>();
+        }
+
+        public static TaskBuilder start(String ownerId, String title) {
+            TaskBuilder builder = new TaskBuilder();
+            builder.setOwnerId(Objects.requireNonNull(ownerId));
+            builder.setTitle(Objects.requireNonNull(title));
+            return builder;
+        }
+
+        public TaskBuilder setId(String id) {
+            this.id = id;
+            return this;
+        }
+
+        public TaskBuilder setTitle(String title) {
+            this.title = Objects.requireNonNull(title);
+            return this;
+        }
+
+        public TaskBuilder setDescription(String description) {
+            this.description = description;
+            return this;
+        }
+
+        public TaskBuilder setFinished(boolean finished) {
+            this.finished = finished;
+            return this;
+        }
+
+        public TaskBuilder setOwnerId(String ownerId) {
+            this.ownerId = Objects.requireNonNull(ownerId);
+            return this;
+        }
+
+        public TaskBuilder setCreatedDate(Date createdDate) {
+            this.createdDate = Objects.requireNonNull(createdDate);
+            return this;
+        }
+
+        public TaskBuilder setClosedDate(Date closedDate) {
+            this.closedDate = Objects.requireNonNull(closedDate);
+            return this;
+        }
+
+        public TaskBuilder setStartDate(Date startDate) {
+            this.startDate = Objects.requireNonNull(startDate);
+            return this;
+        }
+
+        public TaskBuilder setDueDate(Date dueDate) {
+            this.dueDate = Objects.requireNonNull(dueDate);
+            return this;
+        }
+
+        public TaskBuilder addTag(Tag tag) {
+            tags.add(Objects.requireNonNull(tag));
+            return this;
+        }
+
+        public TaskBuilder addSubtask(Task subtask) {
+            subtasks.add(Objects.requireNonNull(subtask));
+            return this;
+        }
+
+        public TaskBuilder setParentTask(Task parentTask) {
+            this.parentTask = parentTask;
+            return this;
+        }
+
+        public Task createTask() {
+            if (title == null || ownerId == null) {
+                throw new NullPointerException("Task cannot be build without required fields: title, ownerId");
+            }
+            return new Task(id, ownerId, title, description, tags, subtasks, finished, createdDate, closedDate, startDate,
+                    dueDate, parentTask);
+        }
+    }
 }
