@@ -32,7 +32,7 @@ public class TaskDao {
                 .append("created_date", task.getCreatedDate())
                 .append("closed_date", task.getClosedDate())
                 .append("finished", task.isFinished())
-                .append("subtasks", getSubtasksIds(task.getSubtasks()))
+                .append("subtasks", Collections.emptyList())
                 .append("owner_id", task.getOwnerId())
                 // TODO keeping tags by names here means that when changing tags names it will have to be changes in every task
                 .append("tags", getTagsNames(task.getTags()))
@@ -44,14 +44,6 @@ public class TaskDao {
 
         task.setId(taskId);
         return task;
-    }
-
-    private List<String> getSubtasksIds(List<Task> subtasks) {
-        List<String> subtasksIds = new ArrayList<>(subtasks.size());
-        for (Task subtask : subtasks) {
-            subtasksIds.add(subtask.getId());
-        }
-        return subtasksIds;
     }
 
     private Set<String> getTagsNames(Set<Tag> tags) {
