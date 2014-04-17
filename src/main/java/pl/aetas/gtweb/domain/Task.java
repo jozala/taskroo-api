@@ -1,11 +1,12 @@
 package pl.aetas.gtweb.domain;
 
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonIgnore;
-import org.codehaus.jackson.annotate.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 import java.util.*;
 
+@JsonDeserialize(builder = Task.TaskBuilder.class)
 public class Task {
 
     private static final int MAX_SUBTASKS_LEVELS = 10;
@@ -18,26 +19,23 @@ public class Task {
     private final Set<Tag> tags;
     private final List<Task> subtasks;
     private final boolean finished;
-    private final Date createdDate;
+    private Date createdDate;
     @JsonIgnore
-    private final Task parentTask;
+    private Task parentTask;
     private final Date startDate;
     private final Date dueDate;
     private final Date closedDate;
 
-    @JsonCreator
-    private Task(@JsonProperty("id") String id, @JsonProperty("ownerId") String ownerId,
-                 @JsonProperty("title") String title, @JsonProperty("description") String description,
-                 @JsonProperty("tags") Set<Tag> tags, @JsonProperty("subtasks") List<Task> subtasks,
-                 @JsonProperty("finished") boolean finished, @JsonProperty("closedDate") Date closedDate,
-                 @JsonProperty("createdDate") Date createdDate, @JsonProperty("startDate") Date startDate,
-                 @JsonProperty("dueDate") Date dueDate, @JsonProperty("parentTask") Task parentTask) {
+    private Task(String id, String ownerId, String title, String description, Set<Tag> tags, List<Task> subtasks,
+                 boolean finished, Date closedDate, Date createdDate, Date startDate, Date dueDate, Task parentTask) {
         this.id = id;
         this.ownerId = ownerId;
         this.description = description;
         this.title = title;
-        this.tags = tags;
-        this.subtasks = subtasks;
+        this.tags = new HashSet<>();
+        this.tags.addAll(tags);
+        this.subtasks = new LinkedList<>();
+        this.subtasks.addAll(subtasks);
         this.finished = finished;
         this.closedDate = closedDate;
         this.createdDate = createdDate;
@@ -131,6 +129,18 @@ public class Task {
         this.ownerId = ownerId;
     }
 
+    public void addSubtask(Task task) {
+        subtasks.add(task);
+    }
+
+    public void setParentTask(Task parentTask) {
+        this.parentTask = parentTask;
+    }
+
+    public void setCreatedDate(Date createdDate) {
+        this.createdDate = createdDate;
+    }
+
 
     public static class TaskBuilder {
 
@@ -147,60 +157,62 @@ public class Task {
         private Date closedDate;
         private Task parentTask;
 
-        private TaskBuilder() {
+        public TaskBuilder() {
             tags = new HashSet<>();
             subtasks = new LinkedList<>();
         }
 
-        public static TaskBuilder start(String ownerId, String title) {
-            TaskBuilder builder = new TaskBuilder();
-            builder.setOwnerId(Objects.requireNonNull(ownerId));
-            builder.setTitle(Objects.requireNonNull(title));
-            return builder;
-        }
-
+        @JsonProperty("id")
         public TaskBuilder setId(String id) {
             this.id = id;
             return this;
         }
 
+        @JsonProperty(value = "title", required = true)
         public TaskBuilder setTitle(String title) {
             this.title = Objects.requireNonNull(title);
             return this;
         }
 
+        @JsonProperty("description")
         public TaskBuilder setDescription(String description) {
             this.description = description;
             return this;
         }
 
+        @JsonProperty("finished")
         public TaskBuilder setFinished(boolean finished) {
             this.finished = finished;
             return this;
         }
+
 
         public TaskBuilder setOwnerId(String ownerId) {
             this.ownerId = Objects.requireNonNull(ownerId);
             return this;
         }
 
+        @JsonProperty("createdDate")
         public TaskBuilder setCreatedDate(Date createdDate) {
             this.createdDate = Objects.requireNonNull(createdDate);
             return this;
         }
 
+        @JsonProperty("closedDate")
         public TaskBuilder setClosedDate(Date closedDate) {
-            this.closedDate = Objects.requireNonNull(closedDate);
+            this.closedDate = closedDate;
             return this;
         }
 
+        @JsonProperty("startDate")
         public TaskBuilder setStartDate(Date startDate) {
-            this.startDate = Objects.requireNonNull(startDate);
+            this.startDate = startDate;
             return this;
         }
 
+        @JsonProperty("dueDate")
         public TaskBuilder setDueDate(Date dueDate) {
-            this.dueDate = Objects.requireNonNull(dueDate);
+            this.dueDate = dueDate;
             return this;
         }
 
@@ -209,8 +221,20 @@ public class Task {
             return this;
         }
 
+        @JsonProperty("tags")
+        public TaskBuilder addTask(List<Tag> tags) {
+            this.tags.addAll(tags);
+            return this;
+        }
+
         public TaskBuilder addSubtask(Task subtask) {
             subtasks.add(Objects.requireNonNull(subtask));
+            return this;
+        }
+
+        @JsonProperty("subtasks")
+        public TaskBuilder addSubtasks(List<Task> subtasks) {
+            this.subtasks.addAll(subtasks);
             return this;
         }
 
@@ -219,11 +243,11 @@ public class Task {
             return this;
         }
 
-        public Task createTask() {
-            if (title == null || ownerId == null) {
-                throw new NullPointerException("Task cannot be build without required fields: title, ownerId");
+        public Task build() {
+            if (title == null) {
+                throw new NullPointerException("Task cannot be build without title");
             }
-            return new Task(id, ownerId, title, description, tags, subtasks, finished, createdDate, closedDate, startDate,
+            return new Task(id, ownerId, title, description, tags, subtasks, finished, closedDate, createdDate, startDate,
                     dueDate, parentTask);
         }
     }

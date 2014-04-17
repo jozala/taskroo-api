@@ -6,12 +6,17 @@ import org.bson.types.ObjectId
 
 class TasksServiceSpec extends AcceptanceTestBase {
 
+    def setupSpec() {
+        cleanup()
+    }
+
     def setup() {
         createTagInDb(TEST_USER_ID, 'planned', '#10f028', false)
     }
 
     void cleanup() {
-        tagsCollection.remove(QueryBuilder.start('_id.owner_id').is(TEST_USER_ID).get())
+        tasksCollection.remove(QueryBuilder.start('owner_id').is(TEST_USER_ID).get())
+        tagsCollection.remove(QueryBuilder.start('owner_id').is(TEST_USER_ID).get())
     }
 
     def "should return 201 with newly created task when new task has been created"() {
@@ -26,7 +31,6 @@ class TasksServiceSpec extends AcceptanceTestBase {
         response.data.title == 'Reserve the table in Pillars for 20th of March'
         response.data.tags.size() == 1
         response.data.tags.first().name == 'planned'
-        response.data.tags.first().id != 24
     }
 
     def "should return Forbidden (403) when unauthorized access"() {
@@ -39,10 +43,10 @@ class TasksServiceSpec extends AcceptanceTestBase {
     def "should create task in DB with ownerId set"() {
         given: 'user exists in the session'
         def sessionId = createSessionWithUser(TEST_USER_ID)
-        when:
+        when: "client sends request to create new task"
         def response = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON,
                 headers: ['Session-Id': sessionId])
-        then:
+        then: "new task is saved in database"
         response.status == 201
         def taskDbObject = tasksCollection.findOne(new BasicDBObject('_id', new ObjectId(response.data.id)))
         taskDbObject.get('owner_id') == TEST_USER_ID
@@ -67,9 +71,21 @@ class TasksServiceSpec extends AcceptanceTestBase {
             }'''
 
     void createTagInDb(String ownerId, String name, String color, boolean visibleInWorkView) {
-        tagsCollection.insert(new BasicDBObject([_id: [name: name, owner_id: ownerId, ], color: color, visible_in_work_view: visibleInWorkView]))
+        tagsCollection.insert(new BasicDBObject([name: name, owner_id: ownerId, color: color, visible_in_workview: visibleInWorkView]))
     }
 
-    // TODO test if task is given with existing tags
-
+    def "should retrieve all tasks belong to user from session"() {
+        given: 'user exists in session and user has tasks'
+        def sessionId = createSessionWithUser(TEST_USER_ID)
+        client.post(path: 'tasks', body: '{"title": "taskTitle1"}', requestContentType: ContentType.JSON,
+                headers: ['Session-Id': sessionId])
+        client.post(path: 'tasks', body: '{"title": "taskTitle2"}', requestContentType: ContentType.JSON,
+                headers: ['Session-Id': sessionId])
+        when: 'client sends request to get all tasks'
+        def response = client.get([path: 'tasks', headers: ['Session-Id': sessionId]])
+        then: 'response contains list of tasks'
+        response.status == 200
+        response.data.collect { it.title }.contains('taskTitle1')
+        response.data.collect { it.title }.contains('taskTitle2')
+    }
 }

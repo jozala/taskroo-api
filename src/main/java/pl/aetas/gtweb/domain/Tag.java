@@ -1,22 +1,31 @@
 package pl.aetas.gtweb.domain;
 
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import java.util.Objects;
 
 public class Tag {
 
+    private final String id;
     private String ownerId;
     private final String name;
     private final String color;
     private final boolean visibleInWorkView;
 
     @JsonCreator
-    public Tag(@JsonProperty("ownerId") String ownerId, @JsonProperty("name") String name,
+    public Tag(@JsonProperty("id") String id, @JsonProperty("ownerId") String ownerId, @JsonProperty("name") String name,
                @JsonProperty("color") String color, @JsonProperty("visibleInWorkView") boolean visibleInWorkView) {
+        this.id = id;
         this.ownerId = ownerId;
         this.name = name;
         this.color = color;
         this.visibleInWorkView = visibleInWorkView;
+    }
+
+    public String getId() {
+        return id;
     }
 
     public String getOwnerId() {
@@ -40,19 +49,35 @@ public class Tag {
     }
 
     public static class TagBuilder {
-
+        private String id;
         private String ownerId;
         private String name;
         private String color;
-        private Boolean visibleInWorkView;
+        private boolean visibleInWorkView;
+
+        private TagBuilder() {
+            // use static "start" method instead
+        }
+
+        public static TagBuilder start(String ownerId, String name) {
+            TagBuilder tagBuilder = new TagBuilder();
+            tagBuilder.ownerId(Objects.requireNonNull(ownerId));
+            tagBuilder.name(Objects.requireNonNull(name));
+            return tagBuilder;
+        }
+
+        public TagBuilder id(String id) {
+            this.id = id;
+            return this;
+        }
 
         public TagBuilder ownerId(String ownerId) {
-            this.ownerId = ownerId;
+            this.ownerId = Objects.requireNonNull(ownerId);
             return this;
         }
 
         public TagBuilder name(final String name) {
-            this.name = name;
+            this.name = Objects.requireNonNull(name);
             return this;
         }
 
@@ -67,7 +92,7 @@ public class Tag {
         }
 
         public Tag build() {
-            return new Tag(ownerId, name, color, visibleInWorkView);
+            return new Tag(id, ownerId, name, color, visibleInWorkView);
         }
 
     }

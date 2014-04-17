@@ -16,6 +16,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
 import java.net.URI;
+import java.util.Collection;
 
 @Singleton
 @RolesAllowed("user")
@@ -35,11 +36,9 @@ public class TasksService {
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    public Task retrieveTasks() {
-        return Task.TaskBuilder.start("mariusz", "title")
-                .setId("taskId")
-                .setDescription("description")
-                .createTask();
+    public Response getAll(@Context SecurityContext sc) {
+        Collection<Task> tasks = taskDao.findAllByOwnerId(sc.getUserPrincipal().getName());
+        return Response.ok(tasks).build();
     }
 
     @POST

@@ -27,7 +27,7 @@ class TagsServiceTest extends Specification {
         principal.getName() >> 'testUserName'
         securityContext.getUserPrincipal() >> principal
         when:
-        tagsService.retrieveTasks(securityContext)
+        tagsService.getAll(securityContext)
         then:
         1 * tagDao.getAllTagsByOwnerId('testUserName')
 

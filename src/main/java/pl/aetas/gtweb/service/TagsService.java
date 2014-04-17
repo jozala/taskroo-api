@@ -28,10 +28,9 @@ public class TagsService {
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    public List<Tag> retrieveTasks(@Context SecurityContext sc) {
+    public List<Tag> getAll(@Context SecurityContext sc) {
         String userId = sc.getUserPrincipal().getName();
         return tagDao.getAllTagsByOwnerId(userId);
-
     }
 
 }

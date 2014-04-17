@@ -1,5 +1,6 @@
 package pl.aetas.gtweb.integration.data
 import com.mongodb.BasicDBObject
+import pl.aetas.gtweb.data.DbTagConverter
 import pl.aetas.gtweb.data.TagDao
 import pl.aetas.gtweb.domain.Tag
 
@@ -8,7 +9,7 @@ class TagDaoTest extends IntegrationTestBase {
     TagDao tagDao;
 
     void setup() {
-        tagDao = new TagDao(tagsCollection)
+        tagDao = new TagDao(tagsCollection, new DbTagConverter())
         tagsCollection.drop()
         prepareTestData()
     }
@@ -24,7 +25,7 @@ class TagDaoTest extends IntegrationTestBase {
         tags.every { it.name.contains('OfOwner1')}
     }
 
-    def "should map object from db to tag obejct"() {
+    def "should map object from db to tag object"() {
         when:
         def tags = tagDao.getAllTagsByOwnerId('owner2Login')
         def tag = tags.first()
@@ -37,7 +38,7 @@ class TagDaoTest extends IntegrationTestBase {
 
     def "should return true when tags exists for specified owner"() {
         given:
-        def tag = new Tag('owner2Login', 'tag1OfOwner2', 'pink', true)
+        def tag = new Tag('id', 'owner2Login', 'tag1OfOwner2', 'pink', true)
         when:
         def tagExists = tagDao.exists(tag)
         then:
@@ -46,7 +47,7 @@ class TagDaoTest extends IntegrationTestBase {
 
     def "should return false when tags does not exist for specified owner"() {
         given:
-        def tag = new Tag('owner2Login', 'nonExistingTagName', 'black', true)
+        def tag = new Tag('id', 'owner2Login', 'nonExistingTagName', 'black', true)
         when:
         def tagExists = tagDao.exists(tag)
         then:
@@ -56,10 +57,10 @@ class TagDaoTest extends IntegrationTestBase {
 
     private void prepareTestData() {
         List<Map> tagMaps = []
-        tagMaps << [_id: [name: 'tag1OfOwner1', owner_id: 'owner1Login'], color: 'blue', visibleInWorkView: true]
-        tagMaps << [_id: [name: 'tag2OfOwner1', owner_id: 'owner1Login'], color: 'white', visibleInWorkView: false]
-        tagMaps << [_id: [name: 'tag1OfOwner2', owner_id: 'owner2Login'], color: 'pink', visibleInWorkView: true]
-        tagMaps << [_id: [name: 'tag3OfOwner1', owner_id: 'owner1Login'], color: 'black', visibleInWorkView: false]
+        tagMaps << [name: 'tag1OfOwner1', owner_id: 'owner1Login', color: 'blue', visible_in_workview: true]
+        tagMaps << [name: 'tag2OfOwner1', owner_id: 'owner1Login', color: 'white', visible_in_workview: false]
+        tagMaps << [name: 'tag1OfOwner2', owner_id: 'owner2Login', color: 'pink', visible_in_workview: true]
+        tagMaps << [name: 'tag3OfOwner1', owner_id: 'owner1Login', color: 'black', visible_in_workview: false]
 
         tagMaps.each { tagsCollection.insert(new BasicDBObject(it)) }
     }

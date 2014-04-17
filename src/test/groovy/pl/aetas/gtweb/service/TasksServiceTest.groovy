@@ -11,6 +11,8 @@ import java.security.Principal
 
 class TasksServiceTest extends Specification {
 
+    public static final String TEST_USER_ID = 'testUserId123'
+
     TasksService tasksService
 
     TaskDao taskDao = Mock(TaskDao)
@@ -21,14 +23,15 @@ class TasksServiceTest extends Specification {
         tasksService = new TasksService(taskDao, tagDao);
 
         def principal = Mock(Principal)
-        principal.getName() >> 'mariusz'
+        principal.getName() >> TEST_USER_ID
         securityContext.getUserPrincipal() >> principal
     }
 
     def "should return 201 when task has been created correctly"() {
         given:
-        def task = Task.TaskBuilder.start('mariusz', 'taskTitle').createTask()
-        def taskAfterSave = Task.TaskBuilder.start('mariusz', 'taskTitle').setId('someTaskId').createTask();
+        def task = new Task.TaskBuilder().setOwnerId(TEST_USER_ID).setTitle('taskTitle').setCreatedDate(new Date()).build()
+        def taskAfterSave = new Task.TaskBuilder().setOwnerId(TEST_USER_ID).setTitle('taskTitle')
+                .setId('someTaskId').setCreatedDate(new Date()).build();
         taskDao.insert(task) >> taskAfterSave
         when:
         def response = tasksService.create(securityContext, task)
@@ -38,8 +41,9 @@ class TasksServiceTest extends Specification {
 
     def "should save task"() {
         given:
-        def task = Task.TaskBuilder.start('mariusz', 'taskTitle').createTask()
-        def taskAfterSave = Task.TaskBuilder.start('mariusz', 'taskTitle').setId('someTaskId').createTask();
+        def task = new Task.TaskBuilder().setOwnerId(TEST_USER_ID).setTitle('taskTitle').setCreatedDate(new Date()).build()
+        def taskAfterSave = new Task.TaskBuilder().setOwnerId(TEST_USER_ID).setTitle('taskTitle')
+                .setId('someTaskId').setCreatedDate(new Date()).build();
         when:
         tasksService.create(securityContext, task)
         then:
@@ -48,8 +52,9 @@ class TasksServiceTest extends Specification {
 
     def "should return task after save in the entity"() {
         given:
-        def task = Task.TaskBuilder.start('mariusz', 'taskTitle').createTask()
-        def taskAfterSave = Task.TaskBuilder.start('mariusz', 'taskTitle').setId('someTaskId').createTask();
+        def task = new Task.TaskBuilder().setOwnerId(TEST_USER_ID).setTitle('taskTitle').setCreatedDate(new Date()).build()
+        def taskAfterSave = new Task.TaskBuilder().setOwnerId(TEST_USER_ID).setTitle('taskTitle')
+                .setId('someTaskId').setCreatedDate(new Date()).build();
         taskDao.insert(task) >> taskAfterSave
         when:
         def response = tasksService.create(securityContext, task)
@@ -59,8 +64,9 @@ class TasksServiceTest extends Specification {
 
     def "should return task resource location"() {
         given:
-        def task = Task.TaskBuilder.start('mariusz', 'taskTitle').createTask()
-        def taskAfterSave = Task.TaskBuilder.start('mariusz', 'taskTitle').setId('someTaskId').createTask();
+        def task = new Task.TaskBuilder().setOwnerId(TEST_USER_ID).setTitle('taskTitle').setCreatedDate(new Date()).build()
+        def taskAfterSave = new Task.TaskBuilder().setOwnerId(TEST_USER_ID).setTitle('taskTitle')
+                .setId('someTaskId').setCreatedDate(new Date()).build();
         taskDao.insert(task) >> taskAfterSave
         when:
         def response = tasksService.create(securityContext, task)
@@ -70,10 +76,11 @@ class TasksServiceTest extends Specification {
 
     def "should throw exception when trying to create task with non-existing tags"() {
         given:
-        def nonExistingTag = new Tag('mariusz', 'nonExisting', 'purple', false)
-        def task = Task.TaskBuilder.start('mariusz', 'taskTitle')
+        def nonExistingTag = new Tag('someId', TEST_USER_ID, 'nonExisting', 'purple', false)
+        def task = new Task.TaskBuilder().setOwnerId(TEST_USER_ID).setTitle('taskTitle')
+                .setCreatedDate(new Date())
                 .addTag(nonExistingTag)
-                .createTask()
+                .build()
         tagDao.exists(nonExistingTag) >> false
         when:
         tasksService.create(securityContext, task)
@@ -83,15 +90,24 @@ class TasksServiceTest extends Specification {
 
     def "should set owner id from security context for the task when creating task"() {
         given:
-        def task = Task.TaskBuilder.start('ownerId', 'someTitle').createTask()
-        def principal = Mock(Principal)
-        securityContext.getUserPrincipal() >> principal
+        def task = new Task.TaskBuilder().setOwnerId('ownerId').setTitle('someTitle').setCreatedDate(new Date()).build()
         when:
         tasksService.create(securityContext, task)
         then:
-        1 * taskDao.insert({ it.getOwnerId() == 'mariusz' }) >> task
+        1 * taskDao.insert({ it.getOwnerId() == TEST_USER_ID }) >> task
 
     }
 
-    // TODO test if task is given with existing tags
+    def "should return tasks retrieved from DB for specified user"() {
+        given:
+        def tasks = (1..4).collect {
+            new Task.TaskBuilder().setOwnerId(TEST_USER_ID).setTitle("title$it").setCreatedDate(new Date()).build()
+        }
+        taskDao.findAllByOwnerId(TEST_USER_ID) >> tasks
+        when:
+        def response = tasksService.getAll(securityContext)
+        then:
+        response.status == 200
+        response.entity == tasks
+    }
 }
