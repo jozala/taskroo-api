@@ -2,6 +2,7 @@ package pl.aetas.gtweb.integration.data
 import com.mongodb.BasicDBObject
 import pl.aetas.gtweb.data.DbTagConverter
 import pl.aetas.gtweb.data.TagDao
+import pl.aetas.gtweb.data.UnsupportedDataOperationException
 import pl.aetas.gtweb.domain.Tag
 
 class TagDaoTest extends IntegrationTestBase {
@@ -52,7 +53,43 @@ class TagDaoTest extends IntegrationTestBase {
         def tagExists = tagDao.exists(tag)
         then:
         !tagExists
+    }
 
+    def "should throw exception when ownerId of tag is not set and check if tag exists"() {
+        given:
+        def tag = new Tag(null, null, 'newTag', 'black', true)
+        when:
+        tagDao.exists(tag)
+        then:
+        thrown(UnsupportedDataOperationException)
+    }
+
+    def "should insert tag into DB when inserting tag"() {
+        given:
+        def tag = new Tag(null, 'owner1Login', 'newTag', 'black', true)
+        when:
+        tagDao.insert(tag)
+        then:
+        tagsCollection.count(new BasicDBObject('owner_id','owner1Login').append('name', 'newTag')) == 1
+    }
+
+    def "should return tag with id set when inserting tag"() {
+        given:
+        def tag = new Tag(null, 'owner1Login', 'newTag', 'black', true)
+        when:
+        def tagAfterInsert = tagDao.insert(tag)
+        then:
+        tagAfterInsert.id != null
+        tagAfterInsert.name == 'newTag'
+    }
+
+    def "should throw exception when ownerId of the tag to insert is not set"() {
+        given:
+        def tag = new Tag(null, null, 'newTag', 'black', true)
+        when:
+        tagDao.insert(tag)
+        then:
+        thrown(UnsupportedDataOperationException)
     }
 
     private void prepareTestData() {

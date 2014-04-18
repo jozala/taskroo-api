@@ -19,7 +19,7 @@ public class Tag {
                @JsonProperty("color") String color, @JsonProperty("visibleInWorkView") boolean visibleInWorkView) {
         this.id = id;
         this.ownerId = ownerId;
-        this.name = name;
+        this.name = Objects.requireNonNull(name);
         this.color = color;
         this.visibleInWorkView = visibleInWorkView;
     }

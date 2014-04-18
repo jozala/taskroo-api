@@ -43,6 +43,7 @@ public class TasksService {
 
     @POST
     @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_JSON)
     public Response create(@Context SecurityContext sc, Task task) {
         LOGGER.info("Create task request received");
         task.setOwnerId(sc.getUserPrincipal().getName());

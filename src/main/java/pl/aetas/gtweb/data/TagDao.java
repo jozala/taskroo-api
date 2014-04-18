@@ -1,6 +1,8 @@
 package pl.aetas.gtweb.data;
 
 import com.mongodb.*;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Repository;
 import pl.aetas.gtweb.domain.Tag;
 
@@ -9,6 +11,8 @@ import java.util.List;
 
 @Repository
 public class TagDao {
+
+    private static final Logger LOGGER = LogManager.getLogger();
 
     public static final String ID_KEY = "_id";
     public static final String NAME_KEY = "name";
@@ -31,9 +35,26 @@ public class TagDao {
     }
 
     public boolean exists(Tag tag) {
+        if (tag.getOwnerId() == null) {
+            LOGGER.error("Trying to check if tag exists without ownerId set.");
+            throw new UnsupportedDataOperationException("OwnerId not set in tag to check if exists. OwnerId has to be set.");
+        }
         DBObject query = new BasicDBObject(NAME_KEY, tag.getName()).append(OWNER_ID_KEY, tag.getOwnerId());
         long count = tagsCollection.count(query);
         return count > 0;
     }
 
+    public Tag insert(Tag tag) {
+        if (tag.getOwnerId() == null) {
+            LOGGER.error("Trying to insert tag without ownerId set.");
+            throw new UnsupportedDataOperationException("OwnerId not set in tag to insert. OwnerId has to be set.");
+        }
+        DBObject dbTag = BasicDBObjectBuilder.start(OWNER_ID_KEY, tag.getOwnerId())
+                .add(NAME_KEY, tag.getName())
+                .add(COLOR_KEY, tag.getColor())
+                .add(VISIBLE_IN_WORK_VIEW_KEY, tag.isVisibleInWorkView()).get();
+
+        tagsCollection.insert(dbTag);
+        return dbTagConverter.convertDbObjectToTag(dbTag);
+    }
 }

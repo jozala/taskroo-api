@@ -6,12 +6,12 @@ import pl.aetas.gtweb.domain.Tag;
 
 import javax.annotation.security.RolesAllowed;
 import javax.inject.Inject;
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
+import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
+import java.net.URI;
 import java.util.List;
 
 @Component
@@ -33,4 +33,15 @@ public class TagsService {
         return tagDao.getAllTagsByOwnerId(userId);
     }
 
+    @POST
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response create(@Context SecurityContext securityContext, Tag tag) {
+        tag.setOwnerId(securityContext.getUserPrincipal().getName());
+        if (tagDao.exists(tag)) {
+            return Response.ok(tag).build();
+        }
+        Tag savedTag = tagDao.insert(tag);
+        return Response.created(URI.create("tasks/" + savedTag.getId())).entity(savedTag).build();
+    }
 }
