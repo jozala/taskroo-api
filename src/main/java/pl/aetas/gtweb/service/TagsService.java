@@ -38,10 +38,22 @@ public class TagsService {
     @Consumes(MediaType.APPLICATION_JSON)
     public Response create(@Context SecurityContext securityContext, Tag tag) {
         tag.setOwnerId(securityContext.getUserPrincipal().getName());
-        if (tagDao.exists(tag)) {
-            return Response.ok(tag).build();
+        Tag existingTag = null;
+        if ((existingTag = tagDao.findOne(tag.getOwnerId(), tag.getName())) != null) {
+            return Response.ok(existingTag).build();
         }
         Tag savedTag = tagDao.insert(tag);
         return Response.created(URI.create("tasks/" + savedTag.getId())).entity(savedTag).build();
+    }
+
+    @DELETE
+    @Path("{tagName}")
+    public Response delete(@Context SecurityContext securityContext, @PathParam("tagName") String tagName) {
+        String ownerId = securityContext.getUserPrincipal().getName();
+        if (tagDao.findOne(ownerId, tagName) == null) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
+        tagDao.remove(ownerId, tagName);
+        return Response.noContent().build();
     }
 }

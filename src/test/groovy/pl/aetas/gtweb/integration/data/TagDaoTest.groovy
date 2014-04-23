@@ -1,16 +1,19 @@
 package pl.aetas.gtweb.integration.data
+
 import com.mongodb.BasicDBObject
-import pl.aetas.gtweb.data.DbTagConverter
-import pl.aetas.gtweb.data.TagDao
-import pl.aetas.gtweb.data.UnsupportedDataOperationException
+import org.bson.types.ObjectId
+import pl.aetas.gtweb.data.*
 import pl.aetas.gtweb.domain.Tag
+import pl.aetas.gtweb.domain.Task
 
 class TagDaoTest extends IntegrationTestBase {
 
-    TagDao tagDao;
+    TagDao tagDao
+    TaskDao taskDao
 
     void setup() {
-        tagDao = new TagDao(tagsCollection, new DbTagConverter())
+        tagDao = new TagDao(tagsCollection, new DbTagConverter(), tasksCollection)
+        taskDao = new TaskDao(tasksCollection, tagDao, new DbTasksConverter())
         tagsCollection.drop()
         prepareTestData()
     }
@@ -38,30 +41,58 @@ class TagDaoTest extends IntegrationTestBase {
     }
 
     def "should return true when tags exists for specified owner"() {
-        given:
-        def tag = new Tag('id', 'owner2Login', 'tag1OfOwner2', 'pink', true)
         when:
-        def tagExists = tagDao.exists(tag)
+        def tagExists = tagDao.exists('owner2Login', 'tag1OfOwner2')
         then:
         tagExists
     }
 
     def "should return false when tags does not exist for specified owner"() {
-        given:
-        def tag = new Tag('id', 'owner2Login', 'nonExistingTagName', 'black', true)
         when:
-        def tagExists = tagDao.exists(tag)
+        def tagExists = tagDao.exists('owner2Login', 'nonExistingTagName')
         then:
         !tagExists
     }
 
-    def "should throw exception when ownerId of tag is not set and check if tag exists"() {
-        given:
-        def tag = new Tag(null, null, 'newTag', 'black', true)
+    def "should throw exception when ownerId is null and check if tag exists"() {
         when:
-        tagDao.exists(tag)
+        tagDao.exists(null, 'someTagName')
         then:
-        thrown(UnsupportedDataOperationException)
+        thrown(NullPointerException)
+    }
+
+    def "should return tag when trying to find one with specified name and ownerId"() {
+        given: "tag 'abc' for user with id 'userId' exists"
+        def tag = new Tag(null, 'userId', 'abc', 'purple', false)
+        tagDao.insert(tag)
+        when:
+        def foundTag = tagDao.findOne('userId', 'abc')
+        then:
+        foundTag.name == 'abc'
+        foundTag.color == 'purple'
+        !foundTag.isVisibleInWorkView()
+        foundTag.id != null
+    }
+
+    def "should return null when tag not found"() {
+        when:
+        def foundTag = tagDao.findOne('someUser', 'nonExistingTag')
+        then:
+        foundTag == null
+    }
+
+    def "should throw exception when trying to find tag with null ownerId"() {
+        when:
+        tagDao.findOne(null, 'name')
+        then:
+        thrown(NullPointerException)
+    }
+
+    def "should throw exception when trying to find tag and null name given"() {
+        when:
+        tagDao.findOne('someUserId', null)
+        then:
+        thrown(NullPointerException)
     }
 
     def "should insert tag into DB when inserting tag"() {
@@ -90,6 +121,53 @@ class TagDaoTest extends IntegrationTestBase {
         tagDao.insert(tag)
         then:
         thrown(UnsupportedDataOperationException)
+    }
+
+    def "should remove tag from DB when asked"() {
+        given:
+        def tag = new Tag(null, 'ownerId', 'someTagToRemove', '#123456', true)
+        tagDao.insert(tag)
+        when:
+        tagDao.remove('ownerId', 'someTagToRemove')
+        then:
+        tagsCollection.count(new BasicDBObject([owner_id:'ownerId', name:'someTagToRemove'])) == 0
+    }
+
+    def "should throw exception when trying to remove non-existing tag"() {
+        when:
+        tagDao.remove('ownerId', 'nonExistingTagName')
+        then:
+        thrown(InvalidDaoOperationException)
+    }
+
+    def "should throw exception when trying to remove tag with ownerId as null"() {
+        when:
+        tagDao.remove(null, 'nonExistingTagName')
+        then:
+        thrown(NullPointerException)
+    }
+
+    def "should throw exception when trying to remove tag with tag's name as null"() {
+        when:
+        tagDao.remove('ownerId', null)
+        then:
+        thrown(NullPointerException)
+    }
+
+    def "should remove given tag from all tasks when removing tag"() {
+        given:
+        def tag1 = new Tag(null, 'ownerId', 'one', '#123456', true)
+        def tag2 = new Tag(null, 'ownerId', 'two', '#654321', true)
+        def tag1AfterInsert = tagDao.insert(tag1)
+        tagDao.insert(tag2)
+        def task = new Task.TaskBuilder().setOwnerId('ownerId').setTitle('taskTitle').addTag(tag1).addTag(tag2).build()
+        taskDao.insert(task)
+        when:
+        tagDao.remove('ownerId', 'two')
+        then:
+        def tasksTagsAfterRemoval = tasksCollection.findOne(new BasicDBObject([_id: new ObjectId(task.getId())])).get('tags')
+        tasksTagsAfterRemoval.size() == 1
+        tasksTagsAfterRemoval.first() == tag1AfterInsert.getId()
     }
 
     private void prepareTestData() {

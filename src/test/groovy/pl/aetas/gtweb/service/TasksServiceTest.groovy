@@ -81,7 +81,7 @@ class TasksServiceTest extends Specification {
                 .setCreatedDate(new Date())
                 .addTag(nonExistingTag)
                 .build()
-        tagDao.exists(nonExistingTag) >> false
+        tagDao.exists(TEST_USER_ID, 'nonExisting') >> false
         when:
         tasksService.create(securityContext, task)
         then:

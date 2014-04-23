@@ -19,7 +19,7 @@ class TaskDaoTest extends IntegrationTestBase {
     void setup() {
         cleanup()
         def dbTasksConverter = new DbTasksConverter()
-        def tagDao = new TagDao(tagsCollection, new DbTagConverter())
+        def tagDao = new TagDao(tagsCollection, new DbTagConverter(), tasksCollection)
         taskDao = new TaskDao(tasksCollection, tagDao, dbTasksConverter)
     }
 

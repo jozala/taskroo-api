@@ -67,11 +67,43 @@ class TagsServiceTest extends Specification {
 
     def "should return 200 with tag when trying to create tag with name which already exists"() {
         given:
+        principal.getName() >> 'ownerId'
         def tag = new Tag(null, null, 'someTagName', 'orange', true)
-        tagDao.exists(tag) >> true
+        tagDao.findOne('ownerId','someTagName') >> new Tag('79821374893', 'ownerId', 'someTagName', 'orange', true)
+        tagDao.insert(tag) >> new Tag('id', 'ownerId', 'someTagName', 'orange', true)
         when:
         def response = tagsService.create(securityContext, tag)
         then:
         response.status == 200
+    }
+
+    def "should remove tag from DB when deleting tag"() {
+        given:
+        principal.getName() >> 'ownerId'
+        tagDao.findOne('ownerId', 'someTagName') >> Mock(Tag)
+        when:
+        tagsService.delete(securityContext, 'someTagName')
+        then:
+        1 * tagDao.remove('ownerId', 'someTagName')
+    }
+
+    def "should return 400 when trying to delete tag which does not exist"() {
+        given:
+        principal.getName() >> 'ownerId'
+        tagDao.findOne('ownerId', 'someTagName') >> null
+        when:
+        def response = tagsService.delete(securityContext, 'someTagName')
+        then:
+        response.status == 400
+    }
+
+    def "should return 204 when tag has been deleted correctly"() {
+        given:
+        principal.getName() >> 'ownerId'
+        tagDao.findOne('ownerId', 'someTagName') >> Mock(Tag)
+        when:
+        def response = tagsService.delete(securityContext, 'someTagName')
+        then:
+        response.status == 204
     }
 }

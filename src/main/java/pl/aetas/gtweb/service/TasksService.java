@@ -49,7 +49,7 @@ public class TasksService {
         task.setOwnerId(sc.getUserPrincipal().getName());
         for (Tag tag : task.getTags()) {
             tag.setOwnerId(sc.getUserPrincipal().getName());
-            if (!tagDao.exists(tag)) {
+            if (!tagDao.exists(tag.getOwnerId(), tag.getName())) {
                 LOGGER.warn("Client tried to create task with non-existing tags. Bad Request.");
                 throw new WebApplicationException(Response.Status.BAD_REQUEST);
             }

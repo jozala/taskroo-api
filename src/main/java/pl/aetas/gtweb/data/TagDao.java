@@ -8,6 +8,7 @@ import pl.aetas.gtweb.domain.Tag;
 
 import javax.inject.Inject;
 import java.util.List;
+import java.util.Objects;
 
 @Repository
 public class TagDao {
@@ -22,11 +23,13 @@ public class TagDao {
 
     private final DBCollection tagsCollection;
     private final DbTagConverter dbTagConverter;
+    private final DBCollection tasksCollection;
 
     @Inject
-    public TagDao(DBCollection tagsCollection, DbTagConverter dbTagConverter) {
+    public TagDao(DBCollection tagsCollection, DbTagConverter dbTagConverter, DBCollection tasksCollection) {
         this.tagsCollection = tagsCollection;
         this.dbTagConverter = dbTagConverter;
+        this.tasksCollection = tasksCollection;
     }
 
     public List<Tag> getAllTagsByOwnerId(String ownerId) {
@@ -34,12 +37,10 @@ public class TagDao {
         return dbTagConverter.convertDbObjectsToSetOfTags(dbTags.toArray());
     }
 
-    public boolean exists(Tag tag) {
-        if (tag.getOwnerId() == null) {
-            LOGGER.error("Trying to check if tag exists without ownerId set.");
-            throw new UnsupportedDataOperationException("OwnerId not set in tag to check if exists. OwnerId has to be set.");
-        }
-        DBObject query = new BasicDBObject(NAME_KEY, tag.getName()).append(OWNER_ID_KEY, tag.getOwnerId());
+    public boolean exists(String ownerId, String name) {
+        Objects.requireNonNull(ownerId);
+        Objects.requireNonNull(name);
+        DBObject query = new BasicDBObject(NAME_KEY, name).append(OWNER_ID_KEY, ownerId);
         long count = tagsCollection.count(query);
         return count > 0;
     }
@@ -56,5 +57,36 @@ public class TagDao {
 
         tagsCollection.insert(dbTag);
         return dbTagConverter.convertDbObjectToTag(dbTag);
+    }
+
+    public Tag findOne(String ownerId, String name) {
+        Objects.requireNonNull(ownerId);
+        Objects.requireNonNull(name);
+        DBObject tag = tagsCollection.findOne(new BasicDBObject("owner_id", ownerId).append("name", name));
+        if (tag == null) {
+            return null;
+        }
+        return dbTagConverter.convertDbObjectToTag(tag);
+    }
+
+    public void remove(String ownerId, String name) {
+        Objects.requireNonNull(ownerId);
+        Objects.requireNonNull(name);
+
+        if (!exists(ownerId, name)) {
+            LOGGER.error("Trying to remove non-existing tag with name {} of owner {}", name, ownerId);
+            throw new InvalidDaoOperationException("Trying to remove non-existing tag");
+        }
+
+        BasicDBObject queryTagByOwnerAndName = removeTagFromAllTasksOfThisUser(ownerId, name);
+        tagsCollection.remove(queryTagByOwnerAndName);
+    }
+
+    private BasicDBObject removeTagFromAllTasksOfThisUser(String ownerId, String name) {
+        BasicDBObject queryTagByOwnerAndName = new BasicDBObject(TagDao.OWNER_ID_KEY, ownerId).append(TagDao.NAME_KEY, name);
+        String tagId = tagsCollection.findOne(queryTagByOwnerAndName, new BasicDBObject("_id", true)).get("_id").toString();
+        DBObject queryTasksByOwnerWithTag = QueryBuilder.start(TaskDao.OWNER_ID_KEY).is(ownerId).and(TaskDao.TAGS_KEY).is(tagId).get();
+        tasksCollection.update(queryTasksByOwnerWithTag, new BasicDBObject("$pull", new BasicDBObject(TaskDao.TAGS_KEY, tagId)), false, true);
+        return queryTagByOwnerAndName;
     }
 }

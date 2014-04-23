@@ -3,6 +3,7 @@ import com.mongodb.BasicDBObject
 import com.mongodb.QueryBuilder
 import groovyx.net.http.ContentType
 import groovyx.net.http.HttpResponseDecorator
+import org.bson.types.ObjectId
 
 class TagsServiceSpec extends AcceptanceTestBase {
 
@@ -11,6 +12,7 @@ class TagsServiceSpec extends AcceptanceTestBase {
     }
 
     def cleanup() {
+        tasksCollection.remove(QueryBuilder.start('owner_id').is(TEST_USER_ID).get())
         tagsCollection.remove(QueryBuilder.start('owner_id').in(['owner1Login', 'owner2Login', 'owner3Login', TEST_USER_ID]).get())
         sessionCollection.remove(QueryBuilder.start('user_id').in(['owner1Login', TEST_USER_ID]).get())
     }
@@ -45,7 +47,7 @@ class TagsServiceSpec extends AcceptanceTestBase {
 
     def "should return 200 and tag data when trying to create tag with existing name"() {
         given: "Tag 'abc' exists"
-        def sessionId = createSessionWithUser('ownerLogin')
+        def sessionId = createSessionWithUser(TEST_USER_ID)
         def tag = '{"name": "abc", "color": "gray", "visibleInWorkView": true}'
         def previousResponse = client.post(path: 'tags', headers: ['Session-Id': sessionId], body: tag, requestContentType: ContentType.JSON)
         when: "client sends request to create 'abc' tag"
@@ -54,6 +56,41 @@ class TagsServiceSpec extends AcceptanceTestBase {
         response.status == 200
         and: "id of the tag in the response is the same as existing tag"
         response.data.id == previousResponse.data.id
+    }
+
+    def "should remove tag from DB when client sends DELETE request with tag"() {
+        given: "Tag exists in DB"
+        def sessionId = createSessionWithUser(TEST_USER_ID)
+        def tag = '{"name": "abc", "color": "gray", "visibleInWorkView": true}'
+        def existingTagResponse = client.post(path: 'tags', headers: ['Session-Id': sessionId], body: tag, requestContentType: ContentType.JSON)
+        when: "client sends DELETE request with tag id"
+        def response = client.delete(path: "tags/${existingTagResponse.data.name}", headers: ['Session-Id': sessionId])
+        then: "tag is removed from DB"
+        tagsCollection.count(new BasicDBObject('name','newTag').append('owner_id', TEST_USER_ID)) == 0
+        and: "response status is 204 (no content)"
+        response.status == 204
+    }
+
+    def "should return 400 (bad request) when trying to remove non-existing tag"() {
+        when: "client sends DELETE request with non-existing tag id"
+        def sessionId = createSessionWithUser(TEST_USER_ID)
+        def response = client.delete(path: 'tags/nonExisingTagId', headers: ['Session-Id': sessionId])
+        then: "response is 400 (bad request)"
+        response.status == 400
+    }
+
+    def "should remove tag from all tasks when removing tag"() {
+        given: "Task exists with tag 'abc'"
+        def sessionId = createSessionWithUser(TEST_USER_ID)
+        def tag = '{"name": "abc", "color": "gray", "visibleInWorkView": true}'
+        def existingTagResponse = client.post(path: 'tags', headers: ['Session-Id': sessionId], body: tag, requestContentType: ContentType.JSON)
+        and: "task exists with tag 'abc'"
+        def existingTaskResponse = client.post(path: 'tasks', headers: ['Session-Id': sessionId], body: '{"title": "taskTitle1", "tags":[{"name":"abc"}]}', requestContentType: ContentType.JSON)
+        when: "client sends DELETE request to remove tag 'abc'"
+        client.delete(path: "tags/${existingTagResponse.data.name}", headers: ['Session-Id': sessionId])
+        then: "tag is removed from the task's tags"
+        def tagsDbFromTask = tasksCollection.findOne(new BasicDBObject([_id: new ObjectId(existingTaskResponse.data.id)])).get('tags')
+        tagsDbFromTask.isEmpty()
     }
 
     private static void prepareTestData() {
