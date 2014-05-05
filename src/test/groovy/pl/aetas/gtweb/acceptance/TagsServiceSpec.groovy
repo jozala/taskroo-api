@@ -4,7 +4,9 @@ import com.mongodb.QueryBuilder
 import groovyx.net.http.ContentType
 import groovyx.net.http.HttpResponseDecorator
 import org.bson.types.ObjectId
+import pl.aetas.testing.RunJetty
 
+@RunJetty
 class TagsServiceSpec extends AcceptanceTestBase {
 
     def setupSpec() {
