@@ -1,4 +1,6 @@
 package pl.aetas.gtweb.service
+
+import pl.aetas.gtweb.data.NonExistingResourceOperationException
 import pl.aetas.gtweb.data.TagDao
 import pl.aetas.gtweb.data.TaskDao
 import pl.aetas.gtweb.domain.Tag
@@ -109,5 +111,28 @@ class TasksServiceTest extends Specification {
         then:
         response.status == 200
         response.entity == tasks
+    }
+
+    def "should remove task from DB using given task's id and user from security context when removing task"() {
+        when:
+        tasksService.delete(securityContext, "someTaskId")
+        then:
+        1 * taskDao.remove(TEST_USER_ID, "someTaskId")
+    }
+
+    def "should return 404 (not found) when task with given id does not exists for given user"() {
+        given:
+        taskDao.remove(TEST_USER_ID, "nonExistingTaskId") >> { throw new NonExistingResourceOperationException('') }
+        when:
+        def response = tasksService.delete(securityContext, "nonExistingTaskId")
+        then:
+        response.status == 404
+    }
+
+    def "should return 204 when task has been removed correctly"() {
+        when:
+        def response = tasksService.delete(securityContext, "someTaskId")
+        then:
+        response.status == 204
     }
 }

@@ -2,6 +2,7 @@ package pl.aetas.gtweb.service;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import pl.aetas.gtweb.data.NonExistingResourceOperationException;
 import pl.aetas.gtweb.data.TagDao;
 import pl.aetas.gtweb.data.TaskDao;
 import pl.aetas.gtweb.domain.Tag;
@@ -60,6 +61,16 @@ public class TasksService {
         return Response.created(URI.create("tasks/" + savedTask.getId())).entity(savedTask).build();
     }
 
+    @DELETE
+    @Path("{taskId}")
+    public Response delete(@Context SecurityContext sc, @PathParam("taskId") String id) {
+        try {
+            taskDao.remove(sc.getUserPrincipal().getName(), id);
+        } catch(NonExistingResourceOperationException e) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
+        return Response.noContent().build();
+    }
 }
 
 

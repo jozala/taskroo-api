@@ -117,4 +117,17 @@ public class TaskDao {
         return dbTasksConverter.convertToTasksTree(dbTasks.toArray(), allUserTags);
     }
 
+    public void remove(String ownerId, String taskId) throws NonExistingResourceOperationException {
+        if (!ObjectId.isValid(taskId)) {
+            LOGGER.warn("Task id is invalid: {} (ownerId: {}). Nothing has been removed.", taskId, ownerId);
+            throw new NonExistingResourceOperationException("Invalid task id: " + taskId);
+        }
+        DBObject findByIdAndOwnerIdQuery = QueryBuilder.start("_id").is(new ObjectId(taskId))
+                .and(TaskDao.OWNER_ID_KEY).is(ownerId).get();
+        WriteResult result = tasksCollection.remove(findByIdAndOwnerIdQuery);
+        if (result.getN() == 0) {
+            LOGGER.info("Task with id {} and ownerId {} not found in DB. Nothing has been removed.", taskId, ownerId);
+            throw new NonExistingResourceOperationException("Task with id " + taskId + "and ownerId " + ownerId + " not found in DB");
+        }
+    }
 }

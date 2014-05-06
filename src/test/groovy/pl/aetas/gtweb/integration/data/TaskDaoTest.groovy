@@ -6,6 +6,7 @@ import org.joda.time.DateMidnight
 import org.joda.time.DateTime
 import pl.aetas.gtweb.data.DbTagConverter
 import pl.aetas.gtweb.data.DbTasksConverter
+import pl.aetas.gtweb.data.NonExistingResourceOperationException
 import pl.aetas.gtweb.data.TagDao
 import pl.aetas.gtweb.data.TaskDao
 import pl.aetas.gtweb.data.UnsupportedDataOperationException
@@ -169,5 +170,39 @@ class TaskDaoTest extends IntegrationTestBase {
         retrievedTask.tags == [Tag.TagBuilder.start('mariusz', 'next').build(), Tag.TagBuilder.start('mariusz', 'project').build()] as Set
         retrievedTask.subtasks.first().title == 'subtaskTitle'
         retrievedTask.subtasks.first().createdDate == DateTime.parse('2014-04-01T20:12:54').toDate()
+    }
+
+    def "should remove task of specified owner and id from DB"() {
+        given:
+        def task = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle').setCreatedDate(new Date()).build()
+        def taskAfterUpdate = taskDao.insert(task)
+        when:
+        taskDao.remove('mariusz', taskAfterUpdate.id)
+        then:
+        tasksCollection.count(new BasicDBObject("_id", new ObjectId(taskAfterUpdate.id))) == 0
+    }
+
+    def "should throw exception when trying to remove task and task is owned by another customer"() {
+        given:
+        def task = new Task.TaskBuilder().setOwnerId('onwer1').setTitle('taskTitle').setCreatedDate(new Date()).build()
+        def taskAfterUpdate = taskDao.insert(task)
+        when:
+        taskDao.remove('owner1', taskAfterUpdate.id)
+        then:
+        thrown(NonExistingResourceOperationException)
+    }
+
+    def "should throw exception when trying to remove task and task with given id does not exists"() {
+        when:
+        taskDao.remove('owner', ObjectId.get().toString())
+        then:
+        thrown(NonExistingResourceOperationException)
+    }
+
+    def "should throw exception when trying to remove task specifying invalid task id"() {
+        when:
+        taskDao.remove('owner', 'invalidTaskId')
+        then:
+        thrown(NonExistingResourceOperationException)
     }
 }
