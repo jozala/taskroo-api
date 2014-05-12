@@ -50,6 +50,7 @@ public class TasksService {
         task.setOwnerId(sc.getUserPrincipal().getName());
         for (Tag tag : task.getTags()) {
             tag.setOwnerId(sc.getUserPrincipal().getName());
+            // TODO replace multiple calls to DB with one tags or task validation call do DAO
             if (!tagDao.exists(tag.getOwnerId(), tag.getName())) {
                 LOGGER.warn("Client tried to create task with non-existing tags. Bad Request.");
                 throw new WebApplicationException(Response.Status.BAD_REQUEST);
@@ -70,6 +71,27 @@ public class TasksService {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
         return Response.noContent().build();
+    }
+
+    @PUT
+    @Path("{taskId}")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response update(@Context SecurityContext sc, @PathParam("taskId") String id, Task task) {
+        for (Tag tag : task.getTags()) {
+            tag.setOwnerId(sc.getUserPrincipal().getName());
+            // TODO replace multiple calls to DB with one tags or task validation call do DAO (definitely do task validation)
+            if (!tagDao.exists(tag.getOwnerId(), tag.getName())) {
+                LOGGER.warn("Client tried to create task with non-existing tags. Bad Request.");
+                throw new WebApplicationException(Response.Status.BAD_REQUEST);
+            }
+        }
+        try {
+            Task taskAfterUpdate = taskDao.update(sc.getUserPrincipal().getName(), id, task);
+            return Response.ok(taskAfterUpdate).build();
+        } catch (NonExistingResourceOperationException e) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
     }
 }
 

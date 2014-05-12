@@ -205,4 +205,113 @@ class TaskDaoTest extends IntegrationTestBase {
         then:
         thrown(NonExistingResourceOperationException)
     }
+
+    def "should update task with new values when new task values specified for update"() {
+        given:
+        tagsCollection.insert(new BasicDBObject([name:'tagA', owner_id:'mariusz', color:null, visible_in_workview:false]))
+        tagsCollection.insert(new BasicDBObject([name:'tagB', owner_id:'mariusz', color:'black', visible_in_workview:true]))
+        def task = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
+                .setDescription('desc')
+                .addTag(new Tag('123', 'mariusz', 'tagA', null, false))
+                .setFinished(false)
+                .setStartDate(DateMidnight.parse('2014-02-27').toDate())
+                .setDueDate(DateMidnight.parse('2014-03-13').toDate())
+                .build()
+        task = taskDao.insert(task);
+        def taskToUpdate = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('updatedTaskTitle')
+                .setCreatedDate(DateTime.parse('2014-02-21T12:32:11').toDate())
+                .setDescription('updated description')
+                .addTag(new Tag('123', 'mariusz', 'tagA', null, false))
+                .addTag(new Tag('124', 'mariusz', 'tagB', 'black', true))
+                .setStartDate(DateMidnight.parse('2014-02-28').toDate())
+                .setDueDate(DateMidnight.parse('2014-03-14').toDate())
+                .setClosedDate(DateTime.parse('2014-05-12T11:31:41').toDate())
+                .setFinished(true)
+                .build()
+        when:
+        taskDao.update('mariusz', task.id, taskToUpdate)
+        then:
+        def retrievedTask = taskDao.findAllByOwnerId('mariusz').first()
+        retrievedTask.id == task.id
+        retrievedTask.ownerId == 'mariusz'
+        retrievedTask.title == 'updatedTaskTitle'
+        retrievedTask.description == 'updated description'
+        retrievedTask.startDate == DateMidnight.parse('2014-02-28').toDate()
+        retrievedTask.dueDate == DateMidnight.parse('2014-03-14').toDate()
+        retrievedTask.closedDate == DateTime.parse('2014-05-12T11:31:41').toDate()
+        retrievedTask.finished
+        retrievedTask.tags == [Tag.TagBuilder.start('mariusz', 'tagA').build(), Tag.TagBuilder.start('mariusz', 'tagB').build()] as Set
+    }
+
+    def "should created date stay unchanged when trying to update task with changed created date"() {
+        given:
+        tagsCollection.insert(new BasicDBObject([name:'tagA', owner_id:'mariusz', color:null, visible_in_workview:false]))
+        tagsCollection.insert(new BasicDBObject([name:'tagB', owner_id:'mariusz', color:'black', visible_in_workview:true]))
+        def task = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
+                .build()
+        task = taskDao.insert(task);
+        def taskToUpdate = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('updatedTaskTitle')
+                .setCreatedDate(DateTime.parse('2014-02-25T12:32:11').toDate())
+                .build()
+        when:
+        taskDao.update('mariusz', task.id, taskToUpdate)
+        then:
+        def retrievedTask = taskDao.findAllByOwnerId('mariusz').first()
+        retrievedTask.createdDate == DateTime.parse('2014-01-21T12:32:11').toDate()
+    }
+
+    def "should return task object after update when update has been done"() {
+        given:
+        tagsCollection.insert(new BasicDBObject([name:'tagA', owner_id:'mariusz', color:null, visible_in_workview:false]))
+        tagsCollection.insert(new BasicDBObject([name:'tagB', owner_id:'mariusz', color:'black', visible_in_workview:true]))
+        def task = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
+                .build()
+        task = taskDao.insert(task);
+        def taskToUpdate = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('updatedTaskTitle')
+                .setCreatedDate(DateTime.parse('2014-02-25T12:32:11').toDate())
+                .build()
+        when:
+        def taskAfterUpdate = taskDao.update('mariusz', task.id, taskToUpdate)
+        then:
+        taskAfterUpdate.id == task.id
+        taskAfterUpdate.title == taskToUpdate.title
+    }
+
+    def "should throw exception when trying to update task without ownerId set"() {
+        given:
+        def task = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
+                .build()
+        when:
+        taskDao.update(null, ObjectId.get().toString(), task)
+        then:
+        thrown(NullPointerException)
+    }
+
+    def "should throw exception when trying to update task without task id given"() {
+        given:
+        def task = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
+                .build()
+        when:
+        taskDao.update('mariusz', null, task)
+        then:
+        thrown(NullPointerException)
+    }
+
+    def "should throw exception when task of given id to update not exists"() {
+        given:
+        def task = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
+                .build()
+        when:
+        taskDao.update('mariusz', ObjectId.get().toString(), task)
+        then:
+        thrown(NonExistingResourceOperationException)
+    }
+
+    // TODO what about moving task to subtasks (are path good enough?)
 }

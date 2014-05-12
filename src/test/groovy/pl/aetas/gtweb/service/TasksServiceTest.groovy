@@ -135,4 +135,44 @@ class TasksServiceTest extends Specification {
         then:
         response.status == 204
     }
+
+    def "should update task in DB when requested"() {
+        given:
+        def task = new Task.TaskBuilder().setOwnerId(TEST_USER_ID).setTitle('taskTitle').setCreatedDate(new Date()).build()
+        when:
+        tasksService.update(securityContext, 'someTaskId', task)
+        then:
+        1 * taskDao.update(TEST_USER_ID, 'someTaskId', task)
+    }
+
+    def "should return 200 when task has been updated"() {
+        given:
+        def task = new Task.TaskBuilder().setOwnerId(TEST_USER_ID).setTitle('taskTitle').setCreatedDate(new Date()).build()
+        when:
+        def response = tasksService.update(securityContext, 'someTaskId', task)
+        then:
+        response.status == 200
+    }
+
+    def "should return updated task when task has been updated"() {
+        given:
+        def task = new Task.TaskBuilder().setOwnerId(TEST_USER_ID).setTitle('taskTitle').setCreatedDate(new Date()).build()
+        def taskAfterUpdate = new Task.TaskBuilder().setOwnerId(TEST_USER_ID).setTitle('taskTitle').setCreatedDate(new Date()).build()
+        taskDao.update(_,_,_) >> taskAfterUpdate
+        when:
+        def response = tasksService.update(securityContext, 'someTaskId', task)
+        then:
+        response.status == 200
+        response.entity.is(taskAfterUpdate)
+    }
+
+    def "should return 404 (not found) when trying to update non-existing task"() {
+        given:
+        def task = new Task.TaskBuilder().setOwnerId(TEST_USER_ID).setTitle('taskTitle').setCreatedDate(new Date()).build()
+        taskDao.update(TEST_USER_ID, 'someTaskId', task) >> { throw new NonExistingResourceOperationException('') }
+        when:
+        def response = tasksService.update(securityContext, 'someTaskId', task)
+        then:
+        response.status == 404
+    }
 }

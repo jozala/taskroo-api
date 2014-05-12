@@ -56,10 +56,4 @@ class DbTasksConverterTest extends Specification {
         def topLevelTask = tasks.find { it.id == '1' }
         topLevelTask.subtasks.each { assert it.parentTask == topLevelTask}
     }
-
-    def "should add tags to tasks when specified in the DB objects"() {
-        given:
-        def dbTask = new BasicDBObject([_id:'1',  title:'title 1',  finished: false, created_date: new Date(),
-                                        owner_id: 'ownerId', path: null])
-    }
 }

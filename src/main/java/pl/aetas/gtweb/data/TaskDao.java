@@ -40,7 +40,7 @@ public class TaskDao {
 
     public Task insert(Task task) {
         if (!task.getSubtasks().isEmpty()) {
-            LOGGER.info("POSSIBLE CLIENT MALFUNCTION: Trying to insert task with subtasks.");
+            LOGGER.warn("POSSIBLE CLIENT MALFUNCTION: Trying to insert task with subtasks.");
             throw new UnsupportedDataOperationException("Cannot insert task with subtasks. This is not supported.");
         }
 
@@ -79,9 +79,9 @@ public class TaskDao {
         for (Tag taskTag : taskTags) {
             String tagId = findTagOnListByName(allUserTags, taskTag);
             if (tagId == null) {
-                LOGGER.info("POSSIBLE CLIENT MALFUNCTION: Trying to add task with non-existing tag.");
-                throw new UnsupportedDataOperationException("Cannot add tag "+ taskTag.getName() +
-                        " which does not exists for this user: " + taskTag.getOwnerId());
+                LOGGER.warn("POSSIBLE CLIENT MALFUNCTION: Trying to add task with non-existing tag.");
+                throw new UnsupportedDataOperationException("Cannot add tag '"+ taskTag.getName() +
+                        "' which does not exists for this user: " + taskTag.getOwnerId());
             }
             tagsIds.add(tagId);
         }
@@ -129,5 +129,40 @@ public class TaskDao {
             LOGGER.info("Task with id {} and ownerId {} not found in DB. Nothing has been removed.", taskId, ownerId);
             throw new NonExistingResourceOperationException("Task with id " + taskId + "and ownerId " + ownerId + " not found in DB");
         }
+    }
+
+    public Task update(String ownerId, String taskId, Task task) throws NonExistingResourceOperationException {
+        Objects.requireNonNull(ownerId);
+        Objects.requireNonNull(taskId);
+        Objects.requireNonNull(task);
+
+        DBObject findByIdAndOwnerIdQuery = QueryBuilder.start("_id").is(new ObjectId(taskId))
+                .and(TaskDao.OWNER_ID_KEY).is(ownerId).get();
+
+        List<Tag> allUserTags = tagDao.getAllTagsByOwnerId(ownerId);
+        DBObject taskDbObject = BasicDBObjectBuilder.start(TITLE_KEY, task.getTitle())
+                .append(DESCRIPTION_KEY, task.getDescription())
+                .append(DUE_DATE_KEY, task.getDueDate())
+                .append(START_DATE_KEY, task.getStartDate())
+                .append(CLOSED_DATE_KEY, task.getClosedDate())
+                .append(FINISHED_KEY, task.isFinished())
+                .append(TAGS_KEY, getTagsIds(task.getTags(), allUserTags))
+                // TODO check if parent task is owned by task owner (needed?)
+                .append(PATH_KEY, getPath(task.getParentTask()))
+                .get();
+
+        DBObject dbTaskAfterUpdate = tasksCollection.findAndModify(findByIdAndOwnerIdQuery, null, null, false,
+                new BasicDBObject("$set", taskDbObject), true, false);
+
+        if (dbTaskAfterUpdate == null) {
+            LOGGER.info("Task with id {} and ownerId {} not found in DB. Nothing has been updated.", taskId, ownerId);
+            throw new NonExistingResourceOperationException("Task with id " + taskId + "and ownerId " + ownerId + " not found in DB");
+        }
+
+        Map<String, Tag> tagsMap = new HashMap<>();
+        for (Tag tag : allUserTags) {
+            tagsMap.put(tag.getId(), tag);
+        }
+        return dbTasksConverter.convertSingleDbObjectToTask(dbTaskAfterUpdate, tagsMap);
     }
 }

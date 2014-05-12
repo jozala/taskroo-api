@@ -14,6 +14,7 @@ class TasksServiceSpec extends AcceptanceTestBase {
 
     def setup() {
         createTagInDb(TEST_USER_ID, 'planned', '#10f028', false)
+        createTagInDb(TEST_USER_ID, 'next', '#5ca028', true)
     }
 
     void cleanup() {
@@ -115,7 +116,7 @@ class TasksServiceSpec extends AcceptanceTestBase {
         response.status == 404
     }
 
-    def "should return 404 when trying to remove another user task"() {
+    def "should return 404 when trying to remove another user's task"() {
         given: 'user A exists in session and has tasks'
         def userASessionId = createSessionWithUser(TEST_USER_ID)
         client.post(path: 'tasks', body: '{"title": "taskTitle1"}', requestContentType: ContentType.JSON,
@@ -129,4 +130,111 @@ class TasksServiceSpec extends AcceptanceTestBase {
         then: 'response code is 404 (not found)'
         response.status == 404
     }
+
+    def "should update task with given data when client sends PUT request with task id and task in JSON"() {
+        given: "user is authenticated"
+        def sessionId = createSessionWithUser(TEST_USER_ID)
+        and: "user has created a task"
+        def taskCreatedResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON,
+                headers: ['Session-Id': sessionId])
+        when: "client sends PUT request to update existing task"
+        def response = client.put(path: "tasks/${taskCreatedResponse.data.id}", body: UPDATED_JSON_TASK,
+                requestContentType: ContentType.JSON, headers: ['Session-Id': sessionId])
+        then: "200 (OK) is returned in response"
+        response.status == 200
+        and: "all task field should be updated in response"
+        response.data.title == 'This task title has been updated'
+        response.data.closedDate == 1399411560000
+        response.data.description == 'new description'
+        response.data.dueDate == 1395273600000
+        response.data.finished == true
+        response.data.startDate == 1395273600000
+        response.data.tags.size() == 1
+        response.data.tags.first().name == 'next'
+        and: "all fields of task should be updated in DB"
+        def taskDbObject = tasksCollection.findOne(new BasicDBObject([_id: new ObjectId(taskCreatedResponse.data.id)]))
+        taskDbObject.get('title') == 'This task title has been updated'
+        taskDbObject.get('closed_date') == new Date(1399411560000)
+        taskDbObject.get('description') == 'new description'
+        taskDbObject.get('due_date') == new Date(1395273600000)
+        taskDbObject.get('finished') == true
+        taskDbObject.get('start_date') == new Date(1395273600000)
+        taskDbObject.get('tags').size() == 1
+        tagsCollection.findOne(new BasicDBObject([_id: new ObjectId(taskDbObject.get('tags').first())])).get('name') == 'next'
+    }
+
+    // TODO think what request should be done to make task a subtask of another task
+
+    private static String UPDATED_JSON_TASK =
+            // closed date: Tue May 06 2014 21:26:00
+            // due date: Tue Mar 20 2014 00:00:00
+            '''{
+                "closedDate": 1399411560000,
+                "description": "new description",
+                "dueDate": 1395273600000,
+                "finished": true,
+                "startDate": 1395273600000,
+                "subtasks": [],
+                "tags": [{
+                        "color": "#5ca028",
+                        "name": "next",
+                        "visibleInWorkView": true
+                    }],
+                "title": "This task title has been updated"
+            }'''
+
+    def "should return 404 when trying to update task with non-existing id"() {
+        given: 'user exists without any tasks'
+        def sessionId = createSessionWithUser(TEST_USER_ID)
+        when: 'client sends request to update non-existing task'
+        def response = client.put(path: "tasks/${ObjectId.get()}", body: UPDATED_JSON_TASK,
+                requestContentType: ContentType.JSON, headers: ['Session-Id': sessionId])
+        then: 'response code is 404 (not found)'
+        response.status == 404
+    }
+
+    def "should return 404 when trying to update another user's task"() {
+        given: 'user A exists in session and has tasks'
+        def userASessionId = createSessionWithUser(TEST_USER_ID)
+        def createTaskResponse = client.post(path: 'tasks', body: '{"title": "taskTitle2"}',
+                requestContentType: ContentType.JSON, headers: ['Session-Id': userASessionId])
+        and: 'user B exists without any tasks'
+        def userBSessionId = createSessionWithUser('UserB')
+        when: 'client sends request as user B to update task of user A'
+        def response = client.put([path: "tasks/${createTaskResponse.data.id}", body: '{"title": "taskTitle3"}',
+                                   requestContentType: ContentType.JSON, headers: ['Session-Id': userBSessionId]])
+        then: 'response code is 404 (not found)'
+        response.status == 404
+    }
+
+    def "should return 400 (Bad Request) when trying to update task with non-existing tags"() {
+        given: "user is authenticated"
+        def sessionId = createSessionWithUser(TEST_USER_ID)
+        and: "user has created a task"
+        def taskCreatedResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON,
+                headers: ['Session-Id': sessionId])
+        when: "client sends PUT request to update existing task with non-existing tags"
+        def response = client.put(path: "tasks/${taskCreatedResponse.data.id}", body: UPDATED_JSON_TASK_WITH_INCORRECT_TAG,
+                requestContentType: ContentType.JSON, headers: ['Session-Id': sessionId])
+        then: "400 (Bad Request) is returned in response"
+        response.status == 400
+    }
+
+    private static String UPDATED_JSON_TASK_WITH_INCORRECT_TAG =
+            // closed date: Tue May 06 2014 21:26:00
+            // due date: Tue Mar 20 2014 00:00:00
+            '''{
+                "closedDate": 1399411560000,
+                "description": "new description",
+                "dueDate": 1395273600000,
+                "finished": true,
+                "startDate": 1395273600000,
+                "subtasks": [],
+                "tags": [{
+                        "color": "#5ca028",
+                        "name": "non-existing",
+                        "visibleInWorkView": true
+                    }],
+                "title": "This task title has been updated"
+            }'''
 }

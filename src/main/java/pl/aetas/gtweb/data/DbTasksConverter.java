@@ -42,7 +42,7 @@ public class DbTasksConverter {
         }
     }
 
-    private Task convertSingleDbObjectToTask(DBObject dbTask, Map<String, Tag> tagsMap) {
+    public Task convertSingleDbObjectToTask(DBObject dbTask, Map<String, Tag> tagsMap) {
         String ownerId = dbTask.get(OWNER_ID_KEY).toString();
         Task.TaskBuilder builder = new Task.TaskBuilder()
                 .setOwnerId(ownerId)
