@@ -170,6 +170,68 @@ class TagDaoTest extends IntegrationTestBase {
         tasksTagsAfterRemoval.first() == tag1AfterInsert.getId()
     }
 
+    def "should update tag with given name in DB when updating tag"() {
+        given:
+        def tag = new Tag(null, 'ownerId', 'one', '#123456', true)
+        def tagAfterInsert = tagDao.insert(tag)
+        when:
+        tagDao.update('ownerId', 'one', new Tag(null, 'ownerId', 'two', '#654321', false))
+        then:
+        def tagAfterUpdate = tagDao.getAllTagsByOwnerId('ownerId').first()
+        tagAfterUpdate.id == tagAfterInsert.id
+        tagAfterUpdate.name == 'two'
+        tagAfterUpdate.color == '#654321'
+        !tagAfterUpdate.isVisibleInWorkView()
+    }
+
+    def "should return updated tag when updating tag"() {
+        given:
+        def tag = new Tag(null, 'ownerId', 'one', '#123456', true)
+        def tagAfterInsert = tagDao.insert(tag)
+        when:
+        def updatedTag = tagDao.update('ownerId', 'one', new Tag(null, 'ownerId', 'two', '#654321', false))
+        then:
+        updatedTag.id == tagAfterInsert.id
+        updatedTag.name == 'two'
+        updatedTag.color == '#654321'
+        !updatedTag.isVisibleInWorkView()
+    }
+
+    def "should throw exception when ownerId is not given for update"() {
+        when:
+        tagDao.update(null, 'one', new Tag(null, 'ownerId', 'two', '#654321', false))
+        then:
+        thrown(NullPointerException)
+    }
+
+    def "should throw exception when tag name is not given for update"() {
+        when:
+        tagDao.update('ownerId', null, new Tag(null, 'ownerId', 'two', '#654321', false))
+        then:
+        thrown(NullPointerException)
+    }
+
+    def "should throw exception when tag is not given for update"() {
+        when:
+        tagDao.update('ownerId', 'one', null)
+        then:
+        thrown(NullPointerException)
+    }
+
+    def "should throw exception when tag owner in tag object is different than given"() {
+        when:
+        tagDao.update('ownerId2', 'one', new Tag(null, 'ownerId', 'two', '#654321', false))
+        then:
+        thrown(IllegalArgumentException)
+    }
+
+    def "should throw exception when trying to update non-existing tag"() {
+        when:
+        tagDao.update('ownerId', 'nonExistingTag', new Tag(null, 'ownerId', 'two', '#654321', false))
+        then:
+        thrown(NonExistingResourceOperationException)
+    }
+
     private void prepareTestData() {
         List<Map> tagMaps = []
         tagMaps << [name: 'tag1OfOwner1', owner_id: 'owner1Login', color: 'blue', visible_in_workview: true]

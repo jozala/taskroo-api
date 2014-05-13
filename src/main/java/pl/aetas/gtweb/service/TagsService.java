@@ -1,6 +1,7 @@
 package pl.aetas.gtweb.service;
 
 import org.springframework.stereotype.Component;
+import pl.aetas.gtweb.data.NonExistingResourceOperationException;
 import pl.aetas.gtweb.data.TagDao;
 import pl.aetas.gtweb.domain.Tag;
 
@@ -38,7 +39,7 @@ public class TagsService {
     @Consumes(MediaType.APPLICATION_JSON)
     public Response create(@Context SecurityContext securityContext, Tag tag) {
         tag.setOwnerId(securityContext.getUserPrincipal().getName());
-        Tag existingTag = null;
+        Tag existingTag;
         if ((existingTag = tagDao.findOne(tag.getOwnerId(), tag.getName())) != null) {
             return Response.ok(existingTag).build();
         }
@@ -51,9 +52,25 @@ public class TagsService {
     public Response delete(@Context SecurityContext securityContext, @PathParam("tagName") String tagName) {
         String ownerId = securityContext.getUserPrincipal().getName();
         if (tagDao.findOne(ownerId, tagName) == null) {
+            // TODO should be better 404 ?
             return Response.status(Response.Status.BAD_REQUEST).build();
         }
         tagDao.remove(ownerId, tagName);
         return Response.noContent().build();
+    }
+
+    @PUT
+    @Path("{tagName}")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response update(@Context SecurityContext securityContext, @PathParam("tagName") String tagName, Tag tag) {
+        String ownerId = securityContext.getUserPrincipal().getName();
+        tag.setOwnerId(ownerId);
+        try {
+            Tag tagAfterUpdate = tagDao.update(ownerId, tagName, tag);
+            return Response.ok(tagAfterUpdate).build();
+        } catch (NonExistingResourceOperationException e) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
     }
 }

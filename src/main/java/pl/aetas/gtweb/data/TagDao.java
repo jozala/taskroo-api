@@ -89,4 +89,27 @@ public class TagDao {
         tasksCollection.update(queryTasksByOwnerWithTag, new BasicDBObject("$pull", new BasicDBObject(TaskDao.TAGS_KEY, tagId)), false, true);
         return queryTagByOwnerAndName;
     }
+
+    public Tag update(String ownerId, String currentTagName, Tag tagToUpdate) throws NonExistingResourceOperationException{
+        Objects.requireNonNull(ownerId);
+        Objects.requireNonNull(currentTagName);
+        Objects.requireNonNull(tagToUpdate);
+
+        if (!ownerId.equals(tagToUpdate.getOwnerId())) {
+            LOGGER.warn("Trying to update tag with different userId ({}) then found in session ({})", tagToUpdate.getOwnerId(), ownerId);
+            throw new IllegalArgumentException("OwnerId given is different than ownerId in the tag object");
+        }
+
+        BasicDBObject queryTagByOwnerAndName = new BasicDBObject(TagDao.OWNER_ID_KEY, ownerId).append(TagDao.NAME_KEY, currentTagName);
+        DBObject dbTagToUpdate = BasicDBObjectBuilder.start(OWNER_ID_KEY, ownerId)
+                .add(NAME_KEY, tagToUpdate.getName())
+                .add(COLOR_KEY, tagToUpdate.getColor())
+                .add(VISIBLE_IN_WORK_VIEW_KEY, tagToUpdate.isVisibleInWorkView()).get();
+        DBObject dbTagAfterUpdate = tagsCollection.findAndModify(queryTagByOwnerAndName, null, null, false, dbTagToUpdate, true, false);
+        if (dbTagAfterUpdate == null) {
+            throw new NonExistingResourceOperationException("Tag: " + currentTagName + " for user: " + ownerId +
+                    " cannot be updated, because it has not been found");
+        }
+        return dbTagConverter.convertDbObjectToTag(dbTagAfterUpdate);
+    }
 }

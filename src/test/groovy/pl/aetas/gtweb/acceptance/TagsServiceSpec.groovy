@@ -95,6 +95,36 @@ class TagsServiceSpec extends AcceptanceTestBase {
         tagsDbFromTask.isEmpty()
     }
 
+    def "should update tag fields and return updated tag when update request received"() {
+        given: "Tag 'abc' exists"
+        def sessionId = createSessionWithUser(TEST_USER_ID)
+        def tag = '{"name": "abc", "color": "gray", "visibleInWorkView": true}'
+        def existingTagResponse = client.post(path: 'tags', headers: ['Session-Id': sessionId], body: tag, requestContentType: ContentType.JSON)
+        when: "client sends PUT request to update tag 'abc' with new name, color and changed visibleInWorView value"
+        def updatedTag = '{"name": "notAbcAnyMore", "color": "violet", "visibleInWorkView": false}'
+        def tagAfterUpdateResponse = client.put(path: "tags/abc", headers: ['Session-Id': sessionId], body: updatedTag, requestContentType: ContentType.JSON)
+        then: 'response code should be 200 OK'
+        tagAfterUpdateResponse.status == 200
+        and: "response should contain updated tag"
+        tagAfterUpdateResponse.data.name == 'notAbcAnyMore'
+        tagAfterUpdateResponse.data.color == 'violet'
+        tagAfterUpdateResponse.data.visibleInWorkView == false
+        and: "tag should be updated with new values in DB"
+        def tagDbObject = tagsCollection.findOne(new BasicDBObject('_id', new ObjectId(existingTagResponse.data.id)))
+        tagDbObject.name == 'notAbcAnyMore'
+        tagDbObject.color == 'violet'
+        tagDbObject.visible_in_workview == false
+    }
+
+    def "should return 404 when trying to update non-existing tag"() {
+        when: "client sends PUT request to update non-existing tag"
+        def sessionId = createSessionWithUser(TEST_USER_ID)
+        def someTag = '{"name": "nonExistingTag", "color": "violet", "visibleInWorkView": false}'
+        def response = client.put(path: 'tags/nonExistingTag', headers: ['Session-Id': sessionId], body: someTag, requestContentType: ContentType.JSON)
+        then: "service should respond with 404 (Not Found)"
+        response.status == 404
+    }
+
     private static void prepareTestData() {
         List<Map> tagMaps = []
         tagMaps << [name: 'tag1OfOwner1', owner_id: 'owner1Login', color: 'blue', visible_in_workview: true]
@@ -104,6 +134,9 @@ class TagsServiceSpec extends AcceptanceTestBase {
 
         tagMaps.each { tagsCollection.insert(new BasicDBObject(it)) }
     }
+
+
+
 
 
 }

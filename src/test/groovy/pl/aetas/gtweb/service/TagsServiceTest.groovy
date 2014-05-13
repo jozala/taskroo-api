@@ -1,5 +1,6 @@
 package pl.aetas.gtweb.service
 
+import pl.aetas.gtweb.data.NonExistingResourceOperationException
 import pl.aetas.gtweb.data.TagDao
 import pl.aetas.gtweb.domain.Tag
 import spock.lang.Specification
@@ -105,5 +106,49 @@ class TagsServiceTest extends Specification {
         def response = tagsService.delete(securityContext, 'someTagName')
         then:
         response.status == 204
+    }
+
+    def "should update tag in DB when tag exists for customer"() {
+        given:
+        principal.getName() >> 'ownerId'
+        def tag = new Tag(null, null, 'newTagName', 'orange', true)
+        when:
+        tagsService.update(securityContext, 'tag', tag)
+        then:
+        1 * tagDao.update('ownerId', 'tag', tag)
+    }
+
+    def "should return 200 when tag has been correctly updated"() {
+        given:
+        principal.getName() >> 'ownerId'
+        def tag = new Tag(null, null, 'newTagName', 'orange', true)
+        tagDao.update('ownerId', 'tag', tag) >> new Tag('id', 'ownerId', 'someTagName', 'orange', true)
+        when:
+        def response = tagsService.update(securityContext, 'tag', tag)
+        then:
+        response.status == 200
+    }
+
+    def "should return updated tag in entity when tag has been correctly updated"() {
+        given:
+        principal.getName() >> 'ownerId'
+        def tag = new Tag(null, null, 'newTagName', 'orange', true)
+        def tagAfterUpdate = new Tag('id', 'ownerId', 'someTagName', 'orange', true)
+        tagDao.update('ownerId', 'tag', tag) >> tagAfterUpdate
+        when:
+        def response = tagsService.update(securityContext, 'tag', tag)
+        then:
+        response.entity.is(tagAfterUpdate)
+    }
+
+    def "should return 404 when trying to update non-existing tag"() {
+        given:
+        principal.getName() >> 'ownerId'
+        def tag = new Tag(null, null, 'newTagName', 'orange', true)
+        tagDao.update('ownerId', 'tag', tag) >> {throw new NonExistingResourceOperationException('')}
+        when:
+        def response = tagsService.update(securityContext, 'tag', tag)
+        then:
+        response.status == 404
     }
 }
