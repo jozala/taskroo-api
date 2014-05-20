@@ -237,4 +237,132 @@ class TasksServiceSpec extends AcceptanceTestBase {
                     }],
                 "title": "This task title has been updated"
             }'''
+
+    def "should add task of given taskId as given task's subtask"() {
+        given: "user is authenticated"
+        def sessionId = createSessionWithUser(TEST_USER_ID)
+        and: "user has two, top-level tasks"
+        def taskBResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON,
+                headers: ['Session-Id': sessionId])
+        def taskAResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON,
+                headers: ['Session-Id': sessionId])
+        when: "client sends POST request to add existing task A as subtask to other existing task B"
+        def response = client.post(path: "tasks/${taskBResponse.data.id}/subtasks/${taskAResponse.data.id}", headers: ['Session-Id': sessionId])
+        then: "task A is saved as task's B subtask in the database"
+        def taskAAfterUpdate = tasksCollection.findOne(new BasicDBObject([_id: new ObjectId(taskAResponse.data.id.toString())]))
+        taskAAfterUpdate.path == taskBResponse.data.id.toString()
+        and: "200 OK is returned in response"
+        response.status == 200
+        and: "updated task B is returned in response (task A is subtask of task B)"
+        response.data.subtasks.first().id == taskAResponse.data.id
+    }
+
+    def "should add task of given taskId as given task's subtask lower in hierarchy"() {
+        given: "user is authenticated"
+        def sessionId = createSessionWithUser(TEST_USER_ID)
+        and: "user has three tasks, task A with subtask B and top-level task C"
+        def taskAResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON,
+                headers: ['Session-Id': sessionId])
+        def taskBResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON,
+                headers: ['Session-Id': sessionId])
+        def taskCResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON,
+                headers: ['Session-Id': sessionId])
+        client.post(path: "tasks/${taskAResponse.data.id}/subtasks/${taskBResponse.data.id}", headers: ['Session-Id': sessionId])
+        when: "client sends POST request to add task C as subtask to task B"
+        def response = client.post(path: "tasks/${taskBResponse.data.id}/subtasks/${taskCResponse.data.id}", headers: ['Session-Id': sessionId])
+        then: "task C is saved as task's B subtask in the database"
+        def taskCAfterUpdate = tasksCollection.findOne(new BasicDBObject([_id: new ObjectId(taskCResponse.data.id.toString())]))
+        taskCAfterUpdate.path == taskAResponse.data.id + ',' + taskBResponse.data.id
+        and: "200 OK is returned in response"
+        response.status == 200
+    }
+
+    def "should return BAD REQUEST (400) when trying to add task as subtask to itself"() {
+        given: "user is authenticated"
+        def sessionId = createSessionWithUser(TEST_USER_ID)
+        and: "user has existing task"
+        def taskResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON,
+                headers: ['Session-Id': sessionId])
+        when: "client sends POST request to add task as subtask to itself"
+        def response = client.post(path: "tasks/${taskResponse.data.id}/subtasks/${taskResponse.data.id}", headers: ['Session-Id': sessionId])
+        then: "400 BAD REQUEST is returned in response"
+        response.status == 400
+    }
+
+    def "should return BAD REQUEST (400) when trying to add task as subtask to create circular subtasks"() {
+        given: "user is authenticated"
+        def sessionId = createSessionWithUser(TEST_USER_ID)
+        and: "user has existing task A with subtask B"
+        def taskAResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON, headers: ['Session-Id': sessionId])
+        def taskBResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON, headers: ['Session-Id': sessionId])
+        client.post(path: "tasks/${taskAResponse.data.id}/subtasks/${taskBResponse.data.id}", headers: ['Session-Id': sessionId])
+        when: "client sends POST request to add task A as subtask to task B"
+        def response = client.post(path: "tasks/${taskBResponse.data.id}/subtasks/${taskAResponse.data.id}", headers: ['Session-Id': sessionId])
+        then: "400 BAD REQUEST is returned in response"
+        response.status == 400
+    }
+
+    def "should remove task from parent task's subtasks when task is added as subtask to other task"() {
+        given: "user is authenticated"
+        def sessionId = createSessionWithUser(TEST_USER_ID)
+        and: "user has three tasks, task A with subtask B and top-level task C"
+        def taskAResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON, headers: ['Session-Id': sessionId])
+        def taskBResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON, headers: ['Session-Id': sessionId])
+        def taskCResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON, headers: ['Session-Id': sessionId])
+        client.post(path: "tasks/${taskAResponse.data.id}/subtasks/${taskBResponse.data.id}", headers: ['Session-Id': sessionId])
+        when: "client sends POST request to add task B as subtask to task C"
+        client.post(path: "tasks/${taskCResponse.data.id}/subtasks/${taskBResponse.data.id}", headers: ['Session-Id': sessionId])
+        then: "task B is saved as task's C subtask in the database"
+        def taskBAfterUpdate = tasksCollection.findOne(new BasicDBObject([_id: new ObjectId(taskBResponse.data.id.toString())]))
+        taskBAfterUpdate.path == taskCResponse.data.id.toString()
+        and: "task A should not have any subtasks"
+        def response = client.get([path: 'tasks', headers: ['Session-Id': sessionId]])
+        response.data.find { it.id == taskAResponse.data.id }.subtasks.isEmpty()
+    }
+
+    def "should return NOT FOUND 404 when trying to add task as subtask to non-existing task"() {
+        given: "user is authenticated"
+        def sessionId = createSessionWithUser(TEST_USER_ID)
+        and: "user task"
+        def taskResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON, headers: ['Session-Id': sessionId])
+        when: "client sends POST request to add task as subtask to non-existing task"
+        def response = client.post(path: "tasks/${ObjectId.get().toString()}/subtasks/${taskResponse.data.id}", headers: ['Session-Id': sessionId])
+        then: "404 NOT FOUND is returned in response"
+        response.status == 404
+    }
+
+    def "should return NOT FOUND 404 when trying to add task as subtask to other user's task"() {
+        given: 'user A exists with task A'
+        def userASessionId = createSessionWithUser(TEST_USER_ID)
+        def taskAResponse = client.post(path: 'tasks', body: '{"title": "taskTitleA"}',
+                requestContentType: ContentType.JSON, headers: ['Session-Id': userASessionId])
+        and: 'user B exists with task B'
+        def userBSessionId = createSessionWithUser('UserB')
+        def taskBResponse = client.post(path: 'tasks', body: '{"title": "taskTitleB"}',
+                requestContentType: ContentType.JSON, headers: ['Session-Id': userBSessionId])
+        when: "client as user B sends POST request to add task B as subtask to task A of user A"
+        def response = client.post(path: "tasks/${taskAResponse.data.id}/subtasks/${taskBResponse.data.id}", headers: ['Session-Id': userBSessionId])
+        then: "404 NOT FOUND is returned in response"
+        response.status == 404
+    }
+
+    def "should move whole subtree under new parent task when moving task with subtasks"() {
+        given: "user is authenticated"
+        def sessionId = createSessionWithUser(TEST_USER_ID)
+        and: "user has three tasks, task A with subtask B with subtask C"
+        def taskAResponse = client.post(path: 'tasks', body: '{"title": "taskTitleA"}', requestContentType: ContentType.JSON, headers: ['Session-Id': sessionId])
+        def taskBResponse = client.post(path: 'tasks', body: '{"title": "taskTitleB"}', requestContentType: ContentType.JSON, headers: ['Session-Id': sessionId])
+        def taskCResponse = client.post(path: 'tasks', body: '{"title": "taskTitleC"}', requestContentType: ContentType.JSON, headers: ['Session-Id': sessionId])
+        client.post(path: "tasks/${taskAResponse.data.id}/subtasks/${taskBResponse.data.id}", headers: ['Session-Id': sessionId])
+        client.post(path: "tasks/${taskBResponse.data.id}/subtasks/${taskCResponse.data.id}", headers: ['Session-Id': sessionId])
+        and: "user has top-level task E"
+        def taskEResponse = client.post(path: 'tasks', body: '{"title": "taskTitleE"}', requestContentType: ContentType.JSON, headers: ['Session-Id': sessionId])
+        when: "client sends POST request to add task A as subtask of task E"
+        client.post(path: "tasks/${taskEResponse.data.id}/subtasks/${taskAResponse.data.id}", headers: ['Session-Id': sessionId])
+        then: "tasks A,B and C should be returned as task's E descendants"
+        def response = client.get([path: 'tasks', headers: ['Session-Id': sessionId]])
+        response.data.first().subtasks.first().id == taskAResponse.data.id
+        response.data.first().subtasks.first().subtasks.first().id == taskBResponse.data.id
+        response.data.first().subtasks.first().subtasks.first().subtasks.first().id == taskCResponse.data.id
+    }
 }

@@ -12,11 +12,11 @@ import static pl.aetas.gtweb.data.TaskDao.*;
 @Component
 public class DbTasksConverter {
 
-    public Collection<Task> convertToTasksTree(List<DBObject> dbTasksObjects, List<Tag> allUserTags) {
+    public Collection<Task> convertToTasksTree(List<DBObject> dbTasksObjects, List<Tag> allUserTags, boolean buildingPartOfATree) {
         Map<String, Tag> tagsMap = convertTagsToTagsMap(allUserTags);
         Map<String, Task> tasksMap = new LinkedHashMap<>();
         for (DBObject dbTask : dbTasksObjects) {
-            if (dbTask.get(PATH_KEY) == null) {
+            if (isTopLevelTask(dbTask, tasksMap, buildingPartOfATree)) {
                 tasksMap.put(dbTask.get("_id").toString(), convertSingleDbObjectToTask(dbTask, tagsMap));
             } else {
                 List<String> pathList = Arrays.asList(dbTask.get(PATH_KEY).toString().split(","));
@@ -27,7 +27,18 @@ public class DbTasksConverter {
         return tasksMap.values();
     }
 
+    public Collection<Task> convertToTasksTree(List<DBObject> dbTasksObjects, List<Tag> allUserTags) {
+        return convertToTasksTree(dbTasksObjects, allUserTags, false);
+    }
+
+    private boolean isTopLevelTask(DBObject dbTask, Map<String, Task> alreadyReadTasks, boolean buildingPartOfATree) {
+        return dbTask.get(PATH_KEY) == null ||
+                (buildingPartOfATree && !alreadyReadTasks.containsKey(dbTask.get(PATH_KEY)));
+    }
+
     private void addSubtask(Task ancestorTask, Task taskToAdd, List<String> pathList) {
+        assert ancestorTask != null : "AncestorTask cannot be null. " +
+                "Did you forget about sorting tasks by path or trying to build part of a tree?";
         if (pathList.isEmpty()) {
             taskToAdd.setParentTask(ancestorTask);
             ancestorTask.addSubtask(taskToAdd);

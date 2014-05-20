@@ -1,8 +1,9 @@
 package pl.aetas.gtweb.service
-
+import org.bson.types.ObjectId
 import pl.aetas.gtweb.data.NonExistingResourceOperationException
 import pl.aetas.gtweb.data.TagDao
 import pl.aetas.gtweb.data.TaskDao
+import pl.aetas.gtweb.data.UnsupportedDataOperationException
 import pl.aetas.gtweb.domain.Tag
 import pl.aetas.gtweb.domain.Task
 import spock.lang.Specification
@@ -174,5 +175,73 @@ class TasksServiceTest extends Specification {
         def response = tasksService.update(securityContext, 'someTaskId', task)
         then:
         response.status == 404
+    }
+
+    def "should throw exception when trying to add subtask and give null as parent task's id"() {
+        when:
+        tasksService.addSubtask(securityContext, null, ObjectId.get().toString())
+        then:
+        thrown(NullPointerException)
+    }
+
+    def "should throw exception when trying to add subtask and give null as subtaskId"() {
+        when:
+        tasksService.addSubtask(securityContext, ObjectId.get().toString(), null)
+        then:
+        thrown(NullPointerException)
+    }
+
+    def "should add subtask to task in DB passing logged user id as owner"() {
+        given:
+        def parentTaskId = ObjectId.get().toString()
+        def subtaskId = ObjectId.get().toString()
+        when:
+        tasksService.addSubtask(securityContext, parentTaskId, subtaskId)
+        then:
+        1 * taskDao.addSubtask(TEST_USER_ID, parentTaskId, subtaskId)
+    }
+
+    def "should return 404 when given parentId not exists"() {
+        given:
+        def parentTaskId = ObjectId.get().toString()
+        def subtaskId = ObjectId.get().toString()
+        taskDao.addSubtask(TEST_USER_ID, parentTaskId, subtaskId) >> { throw new NonExistingResourceOperationException('') }
+        when:
+        def response = tasksService.addSubtask(securityContext, parentTaskId, subtaskId)
+        then:
+        response.status == 404
+    }
+
+    def "should throw exception with 400 response when DB return data as incorrect when trying to add subtask"() {
+        given:
+        def parentTaskId = ObjectId.get().toString()
+        def subtaskId = ObjectId.get().toString()
+        taskDao.addSubtask(TEST_USER_ID, parentTaskId, subtaskId) >> { throw new UnsupportedDataOperationException('') }
+        when:
+        tasksService.addSubtask(securityContext, parentTaskId, subtaskId)
+        then:
+        thrown(WebApplicationException)
+    }
+
+    def "should return 200 response when task has been successfully added as a subtask"() {
+        given:
+        def parentTaskId = ObjectId.get().toString()
+        def subtaskId = ObjectId.get().toString()
+        when:
+        def response = tasksService.addSubtask(securityContext, parentTaskId, subtaskId)
+        then:
+        response.status == 200
+    }
+
+    def "should return updated parent task returned by DAO when subtask has been successfully added"() {
+        given:
+        def parentTaskId = ObjectId.get().toString()
+        def subtaskId = ObjectId.get().toString()
+        def parentTaskAfterUpdateMock = Mock(Task)
+        taskDao.addSubtask(TEST_USER_ID, parentTaskId, subtaskId) >> parentTaskAfterUpdateMock
+        when:
+        def response = tasksService.addSubtask(securityContext, parentTaskId, subtaskId)
+        then:
+        response.entity == parentTaskAfterUpdateMock
     }
 }

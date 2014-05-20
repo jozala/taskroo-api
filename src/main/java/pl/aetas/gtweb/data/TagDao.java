@@ -75,6 +75,7 @@ public class TagDao {
 
         if (!exists(ownerId, name)) {
             LOGGER.error("Trying to remove non-existing tag with name {} of owner {}", name, ownerId);
+            // TODO throw NonExistingResourceOperationException instead?
             throw new InvalidDaoOperationException("Trying to remove non-existing tag");
         }
 

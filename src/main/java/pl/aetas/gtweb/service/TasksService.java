@@ -2,9 +2,7 @@ package pl.aetas.gtweb.service;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import pl.aetas.gtweb.data.NonExistingResourceOperationException;
-import pl.aetas.gtweb.data.TagDao;
-import pl.aetas.gtweb.data.TaskDao;
+import pl.aetas.gtweb.data.*;
 import pl.aetas.gtweb.domain.Tag;
 import pl.aetas.gtweb.domain.Task;
 
@@ -18,6 +16,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
 import java.net.URI;
 import java.util.Collection;
+import java.util.Objects;
 
 @Singleton
 @RolesAllowed("user")
@@ -92,6 +91,26 @@ public class TasksService {
         } catch (NonExistingResourceOperationException e) {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
+    }
+
+    @POST
+    @Path("{parentTaskId}/subtasks/{subtaskId}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response addSubtask(@Context SecurityContext sc, @PathParam("parentTaskId") String parentTaskId,
+                               @PathParam("subtaskId") String subtaskId) {
+        Objects.requireNonNull(parentTaskId);
+        Objects.requireNonNull(subtaskId);
+
+        try {
+            Task parentTaskAfterUpdate = taskDao.addSubtask(sc.getUserPrincipal().getName(), parentTaskId, subtaskId);
+            return Response.ok(parentTaskAfterUpdate).build();
+        } catch (NonExistingResourceOperationException e) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        } catch (UnsupportedDataOperationException e) {
+            LOGGER.warn("Unsupported data operation when trying to add subtask", e);
+            throw new WebApplicationException(Response.Status.BAD_REQUEST);
+        }
+
     }
 }
 

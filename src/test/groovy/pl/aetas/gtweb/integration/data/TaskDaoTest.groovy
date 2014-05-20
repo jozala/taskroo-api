@@ -313,5 +313,159 @@ class TaskDaoTest extends IntegrationTestBase {
         thrown(NonExistingResourceOperationException)
     }
 
-    // TODO what about moving task to subtasks (are path good enough?)
+    def "should change task's path in DB when setting task as subtask"() {
+        given:
+        def parentTask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle1')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
+                .build()
+        def subtask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle2')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
+                .build()
+        taskDao.insert(parentTask)
+        taskDao.insert(subtask)
+        when:
+        taskDao.addSubtask('mariusz', parentTask.id, subtask.id)
+        then:
+        tasksCollection.findOne(new BasicDBObject([_id:new ObjectId(subtask.id)])).path == parentTask.id
+    }
+
+    def "should throw non existing response exception when trying to add subtask to another customer parent task"() {
+        given:
+        def parentTask = new Task.TaskBuilder().setOwnerId('owner1').setTitle('taskTitle1')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
+                .build()
+        def subtask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle2')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
+                .build()
+        taskDao.insert(parentTask)
+        taskDao.insert(subtask)
+        when:
+        taskDao.addSubtask('mariusz', parentTask.id, subtask.id)
+        then:
+        thrown(NonExistingResourceOperationException)
+    }
+
+    def "should throw non existing response exception when trying to add subtask of another customer"() {
+        given:
+        def parentTask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle1')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
+                .build()
+        def subtask = new Task.TaskBuilder().setOwnerId('owner1').setTitle('taskTitle2')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
+                .build()
+        taskDao.insert(parentTask)
+        taskDao.insert(subtask)
+        when:
+        taskDao.addSubtask('mariusz', parentTask.id, subtask.id)
+        then:
+        thrown(NonExistingResourceOperationException)
+    }
+
+    def "should return parent task with all subtasks as tree when subtasks has been added"() {
+        given:
+        def parentTask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle1')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
+                .build()
+        def subtask1 = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle2')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
+                .build()
+        def subtask2 = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle3')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
+                .build()
+        taskDao.insert(parentTask)
+        taskDao.insert(subtask1)
+        taskDao.insert(subtask2)
+        when:
+        taskDao.addSubtask('mariusz', parentTask.id, subtask1.id)
+        def taskAfterUpdate = taskDao.addSubtask('mariusz', parentTask.id, subtask2.id)
+        then:
+        taskAfterUpdate.id == parentTask.id
+        taskAfterUpdate.subtasks.size() == 2
+        taskAfterUpdate.subtasks.any { it.id == subtask1.id }
+        taskAfterUpdate.subtasks.any { it.id == subtask2.id }
+    }
+
+    def "should set full path to task when setting task as subtask of a non-top level task"() {
+        given:
+        def parentTask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle1')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
+                .build()
+        def subtask1 = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle2')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
+                .build()
+        def subtask2 = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle3')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
+                .build()
+        taskDao.insert(parentTask)
+        taskDao.insert(subtask1)
+        taskDao.insert(subtask2)
+        taskDao.addSubtask('mariusz', parentTask.id, subtask1.id)
+        when:
+        taskDao.addSubtask('mariusz', subtask1.id, subtask2.id)
+        then:
+        tasksCollection.findOne(new BasicDBObject([_id:new ObjectId(subtask2.id)])).path == "$parentTask.id,$subtask1.id"
+    }
+
+    def "should throw exception when trying to add task as subtask to itself"() {
+        given:
+        def task = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle1')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
+                .build()
+        taskDao.insert(task)
+        when:
+        taskDao.addSubtask('mariusz', task.id, task.id)
+        then:
+        thrown(UnsupportedDataOperationException)
+    }
+
+    def "should throw exception when trying to add task as subtask to each own subtask"() {
+        given:
+        def parentTask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle1')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
+                .build()
+        def subtask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle2')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
+                .build()
+        def subSubtask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle3')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
+                .build()
+        taskDao.insert(parentTask)
+        taskDao.insert(subtask)
+        taskDao.insert(subSubtask)
+        taskDao.addSubtask('mariusz', parentTask.id, subtask.id)
+        taskDao.addSubtask('mariusz', subtask.id, subSubtask.id)
+        when:
+        taskDao.addSubtask('mariusz', subSubtask.id, parentTask.id)
+        then:
+        thrown(UnsupportedDataOperationException)
+    }
+
+    def "should change path of all subtasks of moved task when moving task to different parent"() {
+        given:
+        def topParentTask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle1')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
+                .build()
+        def parentTask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle1')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
+                .build()
+        def subtask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle2')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
+                .build()
+        def subSubtask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle3')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
+                .build()
+        taskDao.insert(topParentTask)
+        taskDao.insert(parentTask)
+        taskDao.insert(subtask)
+        taskDao.insert(subSubtask)
+        taskDao.addSubtask('mariusz', parentTask.id, subtask.id)
+        taskDao.addSubtask('mariusz', subtask.id, subSubtask.id)
+        when:
+        taskDao.addSubtask('mariusz', topParentTask.id, parentTask.id)
+        then:
+        def subtaskDbAfterUpdate = tasksCollection.findOne(new BasicDBObject('_id', new ObjectId(subtask.id)))
+        subtaskDbAfterUpdate.path == "$topParentTask.id,$parentTask.id"
+        def subSubtaskDbAfterUpdate = tasksCollection.findOne(new BasicDBObject('_id', new ObjectId(subSubtask.id)))
+        subSubtaskDbAfterUpdate.path == "$topParentTask.id,$parentTask.id,$subtask.id"
+    }
 }
