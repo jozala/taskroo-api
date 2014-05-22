@@ -103,7 +103,6 @@
                 </executions>
                 <configuration>
                     <includes>
-                        <include>pl/aetas/gtweb/integration/**/*Test.java</include>
                         <include>pl/aetas/gtweb/acceptance/**/*Spec.java</include>
                     </includes>
                 </configuration>
@@ -115,7 +114,6 @@
                 <configuration>
                     <excludes>
                         <exclude>**/acceptance/**</exclude>
-                        <exclude>**/integration/**</exclude>
                     </excludes>
                 </configuration>
             </plugin>
