@@ -51,11 +51,12 @@ public class TagsService {
     @Path("{tagName}")
     public Response delete(@Context SecurityContext securityContext, @PathParam("tagName") String tagName) {
         String ownerId = securityContext.getUserPrincipal().getName();
-        if (tagDao.findOne(ownerId, tagName) == null) {
+        try {
+            tagDao.remove(ownerId, tagName);
+        } catch (NonExistingResourceOperationException e) {
             // TODO should be better 404 ?
             return Response.status(Response.Status.BAD_REQUEST).build();
         }
-        tagDao.remove(ownerId, tagName);
         return Response.noContent().build();
     }
 

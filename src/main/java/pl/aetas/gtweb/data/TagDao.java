@@ -3,6 +3,7 @@ package pl.aetas.gtweb.data;
 import com.mongodb.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.bson.types.ObjectId;
 import org.springframework.stereotype.Repository;
 import pl.aetas.gtweb.domain.Tag;
 
@@ -69,26 +70,24 @@ public class TagDao {
         return dbTagConverter.convertDbObjectToTag(tag);
     }
 
-    public void remove(String ownerId, String name) {
+    public void remove(String ownerId, String name) throws NonExistingResourceOperationException{
         Objects.requireNonNull(ownerId);
         Objects.requireNonNull(name);
 
         if (!exists(ownerId, name)) {
             LOGGER.error("Trying to remove non-existing tag with name {} of owner {}", name, ownerId);
-            // TODO throw NonExistingResourceOperationException instead?
-            throw new InvalidDaoOperationException("Trying to remove non-existing tag");
+            throw new NonExistingResourceOperationException("Trying to remove non-existing tag");
         }
 
-        BasicDBObject queryTagByOwnerAndName = removeTagFromAllTasksOfThisUser(ownerId, name);
-        tagsCollection.remove(queryTagByOwnerAndName);
-    }
-
-    private BasicDBObject removeTagFromAllTasksOfThisUser(String ownerId, String name) {
         BasicDBObject queryTagByOwnerAndName = new BasicDBObject(TagDao.OWNER_ID_KEY, ownerId).append(TagDao.NAME_KEY, name);
         String tagId = tagsCollection.findOne(queryTagByOwnerAndName, new BasicDBObject("_id", true)).get("_id").toString();
+        tagsCollection.remove(new BasicDBObject("_id", new ObjectId(tagId)));
+        removeTagFromAllTasksOfThisUser(ownerId, tagId);
+    }
+
+    private void removeTagFromAllTasksOfThisUser(String ownerId, String tagId) {
         DBObject queryTasksByOwnerWithTag = QueryBuilder.start(TaskDao.OWNER_ID_KEY).is(ownerId).and(TaskDao.TAGS_KEY).is(tagId).get();
         tasksCollection.update(queryTasksByOwnerWithTag, new BasicDBObject("$pull", new BasicDBObject(TaskDao.TAGS_KEY, tagId)), false, true);
-        return queryTagByOwnerAndName;
     }
 
     public Tag update(String ownerId, String currentTagName, Tag tagToUpdate) throws NonExistingResourceOperationException{

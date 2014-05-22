@@ -125,6 +125,7 @@ public class TaskDao {
             LOGGER.warn("Task id is invalid: {} (ownerId: {}). Nothing has been removed.", taskId, ownerId);
             throw new NonExistingResourceOperationException("Invalid task id: " + taskId);
         }
+        // TODO should also remove all subtasks of this task
         DBObject findByIdAndOwnerIdQuery = QueryBuilder.start("_id").is(new ObjectId(taskId))
                 .and(TaskDao.OWNER_ID_KEY).is(ownerId).get();
         WriteResult result = tasksCollection.remove(findByIdAndOwnerIdQuery);
@@ -189,6 +190,9 @@ public class TaskDao {
                 .and(TaskDao.OWNER_ID_KEY).is(ownerId).get();
 
 
+        // TODO this is world's biggest mistake. It will stop the whole world for all users waiting to move subtask. ("this" is singleton)
+        // TODO idea to solve this is to keep subtasks as an array and add to the beginning of this array
+        // TODO think also about moving task A with subtasks when A is already in path Z,W (both Z and W should be added to paths of all tasks)
         synchronized (this) {
             DBObject task = tasksCollection.findAndModify(findSubtaskByIdAndOwnerIdQuery, null, null, false,
                     new BasicDBObject("$set", new BasicDBObject(PATH_KEY, parentTaskPath)), true, false);

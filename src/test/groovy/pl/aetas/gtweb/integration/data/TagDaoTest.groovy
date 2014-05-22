@@ -137,7 +137,7 @@ class TagDaoTest extends IntegrationTestBase {
         when:
         tagDao.remove('ownerId', 'nonExistingTagName')
         then:
-        thrown(InvalidDaoOperationException)
+        thrown(NonExistingResourceOperationException)
     }
 
     def "should throw exception when trying to remove tag with ownerId as null"() {
