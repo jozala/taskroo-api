@@ -1,12 +1,11 @@
-package pl.aetas.gtweb.integration.data
+package pl.aetas.gtweb.data
 
 import com.mongodb.BasicDBObject
 import org.bson.types.ObjectId
-import pl.aetas.gtweb.data.*
 import pl.aetas.gtweb.domain.Tag
 import pl.aetas.gtweb.domain.Task
 
-class TagDaoTest extends IntegrationTestBase {
+class TagDaoTest extends DaoTestBase {
 
     TagDao tagDao
     TaskDao taskDao

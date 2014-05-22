@@ -1,19 +1,13 @@
-package pl.aetas.gtweb.integration.data
+package pl.aetas.gtweb.data
 import com.mongodb.BasicDBObject
 import com.mongodb.DBObject
 import org.bson.types.ObjectId
 import org.joda.time.DateMidnight
 import org.joda.time.DateTime
-import pl.aetas.gtweb.data.DbTagConverter
-import pl.aetas.gtweb.data.DbTasksConverter
-import pl.aetas.gtweb.data.NonExistingResourceOperationException
-import pl.aetas.gtweb.data.TagDao
-import pl.aetas.gtweb.data.TaskDao
-import pl.aetas.gtweb.data.UnsupportedDataOperationException
 import pl.aetas.gtweb.domain.Tag
 import pl.aetas.gtweb.domain.Task
 
-class TaskDaoTest extends IntegrationTestBase {
+class TaskDaoTest extends DaoTestBase {
 
     TaskDao taskDao
 
