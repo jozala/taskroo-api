@@ -57,6 +57,7 @@ public class TaskDao {
         List<Tag> allUserTags = tagDao.getAllTagsByOwnerId(task.getOwnerId());
         String parentTaskId = task.getParentTask() != null ? task.getParentTask().getId() : null;
 
+        Set<String> tagsIdsForTask = getTagsIds(task.getTags(), allUserTags);
         DBObject taskDbObject = BasicDBObjectBuilder.start(TITLE_KEY, task.getTitle())
                 .append(DESCRIPTION_KEY, task.getDescription())
                 .append(DUE_DATE_KEY, task.getDueDate())
@@ -65,11 +66,13 @@ public class TaskDao {
                 .append(CLOSED_DATE_KEY, task.getClosedDate())
                 .append(FINISHED_KEY, task.isFinished())
                 .append(OWNER_ID_KEY, task.getOwnerId())
-                .append(TAGS_KEY, getTagsIds(task.getTags(), allUserTags))
+                .append(TAGS_KEY, tagsIdsForTask)
                 .append(PATH_KEY, getPath(parentTaskId))
                 .get();
 
         tasksCollection.insert(taskDbObject);
+
+        taskDbObject = updateTagsIfConcurrentTagsModificationHappen(tagsIdsForTask, taskDbObject);
         String taskId = taskDbObject.get("_id").toString();
         task.setId(taskId);
 
@@ -145,13 +148,14 @@ public class TaskDao {
                 .and(TaskDao.OWNER_ID_KEY).is(ownerId).get();
 
         List<Tag> allUserTags = tagDao.getAllTagsByOwnerId(ownerId);
+        Set<String> tagsIdsForTask = getTagsIds(task.getTags(), allUserTags);
         DBObject taskDbObject = BasicDBObjectBuilder.start(TITLE_KEY, task.getTitle())
                 .append(DESCRIPTION_KEY, task.getDescription())
                 .append(DUE_DATE_KEY, task.getDueDate())
                 .append(START_DATE_KEY, task.getStartDate())
                 .append(CLOSED_DATE_KEY, task.getClosedDate())
                 .append(FINISHED_KEY, task.isFinished())
-                .append(TAGS_KEY, getTagsIds(task.getTags(), allUserTags))
+                .append(TAGS_KEY, tagsIdsForTask)
                 .get();
 
         DBObject dbTaskAfterUpdate = tasksCollection.findAndModify(findByIdAndOwnerIdQuery, null, null, false,
@@ -162,11 +166,25 @@ public class TaskDao {
             throw new NonExistingResourceOperationException("Task with id " + taskId + "and ownerId " + ownerId + " not found in DB");
         }
 
+        dbTaskAfterUpdate = updateTagsIfConcurrentTagsModificationHappen(tagsIdsForTask, dbTaskAfterUpdate);
+
         Map<String, Tag> tagsMap = new HashMap<>();
         for (Tag tag : allUserTags) {
             tagsMap.put(tag.getId(), tag);
         }
         return dbTasksConverter.convertSingleDbObjectToTask(dbTaskAfterUpdate, tagsMap);
+    }
+
+    private DBObject updateTagsIfConcurrentTagsModificationHappen(Set<String> tagsIdsForTask,
+                                                                  DBObject dbTaskAfterUpdate) {
+        BasicDBObject findByIdQuery = new BasicDBObject("_id", dbTaskAfterUpdate.get("id"));
+        Set<String> tagsRemovedInTheMeanTime = tagDao.findNonExistingTags(tagsIdsForTask);
+        if (!tagsRemovedInTheMeanTime.isEmpty()) {
+            tagsIdsForTask.removeAll(tagsRemovedInTheMeanTime);
+            dbTaskAfterUpdate = tasksCollection.findAndModify(findByIdQuery, null, null, false,
+                    new BasicDBObject("$set", new BasicDBObject(TAGS_KEY, tagsIdsForTask)), true, false);
+        }
+        return dbTaskAfterUpdate;
     }
 
     public Task addSubtask(String ownerId, String parentId, String subtaskId) throws NonExistingResourceOperationException {
@@ -191,19 +209,18 @@ public class TaskDao {
 
 
         // TODO this is world's biggest mistake. It will stop the whole world for all users waiting to move subtask. ("this" is singleton)
-        // TODO idea to solve this is to keep subtasks as an array and add to the beginning of this array
+        // TODO idea to solve this is to keep path as an array and add to the beginning of this array
         // TODO think also about moving task A with subtasks when A is already in path Z,W (both Z and W should be added to paths of all tasks)
-        synchronized (this) {
-            DBObject task = tasksCollection.findAndModify(findSubtaskByIdAndOwnerIdQuery, null, null, false,
-                    new BasicDBObject("$set", new BasicDBObject(PATH_KEY, parentTaskPath)), true, false);
+        // TODO see solution in nvAlt note
+        DBObject task = tasksCollection.findAndModify(findSubtaskByIdAndOwnerIdQuery, null, null, false,
+                new BasicDBObject("$set", new BasicDBObject(PATH_KEY, parentTaskPath)), true, false);
 
-            if (task == null) {
-                LOGGER.warn("Parent task with id: {} does not exists for customer with id {}", parentId, ownerId);
-                throw new NonExistingResourceOperationException("Task with id: " + parentId + " does not exists for customer with id: " + ownerId);
-            }
-
-            updateAllDescendantsWithNewPath(ownerId, subtaskId, parentTaskPath);
+        if (task == null) {
+            LOGGER.warn("Parent task with id: {} does not exists for customer with id {}", parentId, ownerId);
+            throw new NonExistingResourceOperationException("Task with id: " + parentId + " does not exists for customer with id: " + ownerId);
         }
+
+        updateAllDescendantsWithNewPath(ownerId, subtaskId, parentTaskPath);
 
 
         return getTask(ownerId, parentId);

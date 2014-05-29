@@ -8,8 +8,10 @@ import org.springframework.stereotype.Repository;
 import pl.aetas.gtweb.domain.Tag;
 
 import javax.inject.Inject;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 @Repository
 public class TagDao {
@@ -111,5 +113,24 @@ public class TagDao {
                     " cannot be updated, because it has not been found");
         }
         return dbTagConverter.convertDbObjectToTag(dbTagAfterUpdate);
+    }
+
+    Set<String> findNonExistingTags(Set<String> tagsIds) {
+        Set<ObjectId> tagsIdsObjectIds = new HashSet<>();
+        for (String tagId : tagsIds) {
+            tagsIdsObjectIds.add(new ObjectId(tagId));
+        }
+        DBCursor existingTags = tagsCollection.find(new BasicDBObject("_id", new BasicDBObject("$in", tagsIdsObjectIds)), new BasicDBObject("_id", true));
+        Set<String> existingTagsIds = new HashSet<>();
+        for (DBObject existingTag : existingTags) {
+            existingTagsIds.add(existingTag.get("_id").toString());
+        }
+        Set<String> nonExistingTagsIds = new HashSet<>();
+        for (String tagId : tagsIds) {
+            if (!existingTagsIds.contains(tagId)) {
+                nonExistingTagsIds.add(tagId);
+            }
+        }
+        return nonExistingTagsIds;
     }
 }

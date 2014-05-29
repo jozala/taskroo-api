@@ -231,6 +231,16 @@ class TagDaoTest extends DaoTestBase {
         thrown(NonExistingResourceOperationException)
     }
 
+    def "should return set of ids of non existing tags"() {
+        def existingTagsIds = tagsCollection.find(new BasicDBObject(), new BasicDBObject([_id: true]))
+                .toArray().collect {it._id.toString()}
+        def nonExistingTagsIds = [ObjectId.get().toString(), ObjectId.get().toString(), ObjectId.get().toString()].toSet()
+        when:
+        def result = tagDao.findNonExistingTags((existingTagsIds + nonExistingTagsIds).toSet())
+        then:
+        result == nonExistingTagsIds
+    }
+
     private void prepareTestData() {
         List<Map> tagMaps = []
         tagMaps << [name: 'tag1OfOwner1', owner_id: 'owner1Login', color: 'blue', visible_in_workview: true]

@@ -163,8 +163,6 @@ class TasksServiceSpec extends AcceptanceTestBase {
         tagsCollection.findOne(new BasicDBObject([_id: new ObjectId(taskDbObject.get('tags').first())])).get('name') == 'next'
     }
 
-    // TODO think what request should be done to make task a subtask of another task
-
     private static String UPDATED_JSON_TASK =
             // closed date: Tue May 06 2014 21:26:00
             // due date: Tue Mar 20 2014 00:00:00
