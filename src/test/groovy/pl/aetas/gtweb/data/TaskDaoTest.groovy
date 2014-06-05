@@ -55,7 +55,7 @@ class TaskDaoTest extends DaoTestBase {
         taskFromDb.closed_date == null
         taskFromDb.start_date == DateMidnight.parse('2014-02-27').toDate()
         taskFromDb.due_date == DateMidnight.parse('2014-03-13').toDate()
-        taskFromDb.path == "$parentTaskOne.id,$parentTaskTwo.id,$parentTaskThree.id"
+        taskFromDb.path == [parentTaskOne.id,parentTaskTwo.id,parentTaskThree.id]
     }
 
     def "should set task id in the returned task object after insert"() {
@@ -320,7 +320,7 @@ class TaskDaoTest extends DaoTestBase {
         when:
         taskDao.addSubtask('mariusz', parentTask.id, subtask.id)
         then:
-        tasksCollection.findOne(new BasicDBObject([_id:new ObjectId(subtask.id)])).path == parentTask.id
+        tasksCollection.findOne(new BasicDBObject([_id:new ObjectId(subtask.id)])).path == [parentTask.id]
     }
 
     def "should throw non existing response exception when trying to add subtask to another customer parent task"() {
@@ -397,7 +397,7 @@ class TaskDaoTest extends DaoTestBase {
         when:
         taskDao.addSubtask('mariusz', subtask1.id, subtask2.id)
         then:
-        tasksCollection.findOne(new BasicDBObject([_id:new ObjectId(subtask2.id)])).path == "$parentTask.id,$subtask1.id"
+        tasksCollection.findOne(new BasicDBObject([_id:new ObjectId(subtask2.id)])).path == [parentTask.id,subtask1.id]
     }
 
     def "should throw exception when trying to add task as subtask to itself"() {
@@ -458,8 +458,8 @@ class TaskDaoTest extends DaoTestBase {
         taskDao.addSubtask('mariusz', topParentTask.id, parentTask.id)
         then:
         def subtaskDbAfterUpdate = tasksCollection.findOne(new BasicDBObject('_id', new ObjectId(subtask.id)))
-        subtaskDbAfterUpdate.path == "$topParentTask.id,$parentTask.id"
+        subtaskDbAfterUpdate.path == [topParentTask.id,parentTask.id]
         def subSubtaskDbAfterUpdate = tasksCollection.findOne(new BasicDBObject('_id', new ObjectId(subSubtask.id)))
-        subSubtaskDbAfterUpdate.path == "$topParentTask.id,$parentTask.id,$subtask.id"
+        subSubtaskDbAfterUpdate.path == [topParentTask.id,parentTask.id,subtask.id]
     }
 }

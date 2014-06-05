@@ -72,6 +72,7 @@ public class TaskDao {
 
         tasksCollection.insert(taskDbObject);
 
+        // TODO here the check if parent task exists is needed as well as in TaskDao#addSubtask
         taskDbObject = updateTagsIfConcurrentTagsModificationHappen(tagsIdsForTask, taskDbObject);
         String taskId = taskDbObject.get("_id").toString();
         task.setId(taskId);
@@ -104,21 +105,22 @@ public class TaskDao {
         return tagId;
     }
 
-    private String getPath(String parentTaskId) {
+    private List<String> getPath(String parentTaskId) {
         if (parentTaskId == null) {
-            return null;
+            return Collections.emptyList();
         }
 
         DBObject dbPath = tasksCollection.findOne(new BasicDBObject("_id", new ObjectId(parentTaskId)),
                 new BasicDBObject(PATH_KEY, true));
 
-        Object parentPath = dbPath.get(PATH_KEY);
-        return (parentPath != null ? parentPath.toString() + "," : "") + dbPath.get("_id").toString();
+        List<String> parentPath = (List<String>)dbPath.get(PATH_KEY);
+        parentPath.add(dbPath.get("_id").toString());
+        return parentPath;
     }
 
     public Collection<Task> findAllByOwnerId(String ownerId) {
         DBObject queryByOwner = QueryBuilder.start(OWNER_ID_KEY).is(ownerId).get();
-        DBCursor dbTasks = tasksCollection.find(queryByOwner).sort(new BasicDBObject(PATH_KEY, 1));
+        DBCursor dbTasks = tasksCollection.find(queryByOwner);
         List<Tag> allUserTags = tagDao.getAllTagsByOwnerId(ownerId);
         return dbTasksConverter.convertToTasksTree(dbTasks.toArray(), allUserTags);
     }
@@ -198,7 +200,7 @@ public class TaskDao {
             throw new UnsupportedDataOperationException("Cannot add task as subtask to itself");
         }
 
-        String parentTaskPath = getPath(parentId);
+        List<String> parentTaskPath = getPath(parentId);
         if (parentTaskPath.contains(subtaskId)) {
             LOGGER.warn("POSSIBLE CLIENT MALFUNCTION: Cannot add task (id: {}) as subtask to one of its subtasks (id: {})", subtaskId, parentId);
             throw new UnsupportedDataOperationException("Cannot add task as subtask to one of its subtasks");
@@ -208,7 +210,6 @@ public class TaskDao {
                 .and(TaskDao.OWNER_ID_KEY).is(ownerId).get();
 
 
-        // TODO this is world's biggest mistake. It will stop the whole world for all users waiting to move subtask. ("this" is singleton)
         // TODO idea to solve this is to keep path as an array and add to the beginning of this array
         // TODO think also about moving task A with subtasks when A is already in path Z,W (both Z and W should be added to paths of all tasks)
         // TODO see solution in nvAlt note
@@ -226,11 +227,12 @@ public class TaskDao {
         return getTask(ownerId, parentId);
     }
 
-    private void updateAllDescendantsWithNewPath(String ownerId, String movedSubtaskId, String parentTaskPath) {
+    private void updateAllDescendantsWithNewPath(String ownerId, String movedSubtaskId, List<String> parentTaskPath) {
         DBObject findAllSubtasksOfSubtaskQuery = QueryBuilder.start(OWNER_ID_KEY).is(ownerId).and(PATH_KEY).is(Pattern.compile(movedSubtaskId)).get();
         DBCursor subtasksOfSubtask = tasksCollection.find(findAllSubtasksOfSubtaskQuery, new BasicDBObject(PATH_KEY, true));
         for (DBObject subtaskOfSubtask : subtasksOfSubtask) {
-            String newSubtaskPath = parentTaskPath + "," + subtaskOfSubtask.get(PATH_KEY);
+            List<String> newSubtaskPath = new LinkedList<>(parentTaskPath);
+            newSubtaskPath.addAll((Collection) subtaskOfSubtask.get(PATH_KEY));
             ObjectId subtaskOfSubtaskId = new ObjectId(subtaskOfSubtask.get("_id").toString());
             tasksCollection.findAndModify(new BasicDBObject("_id", subtaskOfSubtaskId), new BasicDBObject("$set", new BasicDBObject(PATH_KEY, newSubtaskPath)));
         }
@@ -244,12 +246,12 @@ public class TaskDao {
 
     private Task getTask(String ownerId, String taskId) throws NonExistingResourceOperationException {
         DBObject findTaskWithSubtasks = QueryBuilder.start().or(new BasicDBObject("_id", new ObjectId(taskId)),
-                new BasicDBObject(PATH_KEY, Pattern.compile(taskId))).get();
-        DBCursor dbObjects = tasksCollection.find(findTaskWithSubtasks).sort(new BasicDBObject(PATH_KEY, 1));
-        if (dbObjects == null) {
+                new BasicDBObject(PATH_KEY, taskId)).get();
+        DBCursor dbTasks = tasksCollection.find(findTaskWithSubtasks);
+        if (dbTasks.count() == 0) {
             throw new NonExistingResourceOperationException("Task with id: " + taskId + " does not exists for customer with id: " + ownerId);
         }
-        Collection<Task> tasks = dbTasksConverter.convertToTasksTree(dbObjects.toArray(), tagDao.getAllTagsByOwnerId(ownerId), true);
+        Collection<Task> tasks = dbTasksConverter.convertToTasksTree(dbTasks.toArray(), tagDao.getAllTagsByOwnerId(ownerId), true);
 
         return tasks.iterator().next();
     }

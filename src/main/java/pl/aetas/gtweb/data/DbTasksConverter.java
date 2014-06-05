@@ -14,17 +14,46 @@ public class DbTasksConverter {
 
     public Collection<Task> convertToTasksTree(List<DBObject> dbTasksObjects, List<Tag> allUserTags, boolean buildingPartOfATree) {
         Map<String, Tag> tagsMap = convertTagsToTagsMap(allUserTags);
-        Map<String, Task> tasksMap = new LinkedHashMap<>();
-        for (DBObject dbTask : dbTasksObjects) {
-            if (isTopLevelTask(dbTask, tasksMap, buildingPartOfATree)) {
-                tasksMap.put(dbTask.get("_id").toString(), convertSingleDbObjectToTask(dbTask, tagsMap));
+        List<Task> topLevelTasks = new LinkedList<>();
+        Map<String, Task> allTasksMap = new LinkedHashMap<>();
+
+        List<DBObject> pathSortedDbTasks = sortTasksByPath(dbTasksObjects);
+
+        for (DBObject dbTask : pathSortedDbTasks) {
+            Task taskToAdd = convertSingleDbObjectToTask(dbTask, tagsMap);
+            if (isTopLevelTask(dbTask, allTasksMap, buildingPartOfATree)) {
+                topLevelTasks.add(taskToAdd);
+                allTasksMap.put(taskToAdd.getId(), taskToAdd);
             } else {
-                List<String> pathList = Arrays.asList(dbTask.get(PATH_KEY).toString().split(","));
-                Task taskToAdd = convertSingleDbObjectToTask(dbTask, tagsMap);
-                addSubtask(tasksMap.get(pathList.get(0)), taskToAdd, pathList.subList(1, pathList.size()));
+                List<String> path = (List<String>) dbTask.get(PATH_KEY);
+                Task parentTask = allTasksMap.get(path.get(path.size() - 1));
+                assert parentTask != null : "Parent task cannot be null. " +
+                        "Did you forget about sorting tasks by path or trying to build part of a tree?";
+                parentTask.addSubtask(taskToAdd);
+                taskToAdd.setParentTask(parentTask);
+                allTasksMap.put(taskToAdd.getId(), taskToAdd);
             }
         }
-        return tasksMap.values();
+        return topLevelTasks;
+    }
+
+    private List<DBObject> sortTasksByPath(List<DBObject> dbTasksObjects) {
+        List<DBObject> pathSortedDbTasks = new ArrayList<>(dbTasksObjects);
+        Collections.sort(pathSortedDbTasks, new Comparator<DBObject>() {
+            @Override
+            public int compare(DBObject taskDb1, DBObject taskDb2) {
+                StringBuilder task1Path = new StringBuilder();
+                for (String ancestorTaskId : (List<String>) taskDb1.get(PATH_KEY)) {
+                    task1Path.append(ancestorTaskId).append(",");
+                }
+                StringBuilder task2Path = new StringBuilder();
+                for (String ancestorTaskId : (List<String>) taskDb2.get(PATH_KEY)) {
+                    task2Path.append(ancestorTaskId).append(",");
+                }
+                return task1Path.toString().compareTo(task2Path.toString());
+            }
+        });
+        return pathSortedDbTasks;
     }
 
     public Collection<Task> convertToTasksTree(List<DBObject> dbTasksObjects, List<Tag> allUserTags) {
@@ -32,25 +61,9 @@ public class DbTasksConverter {
     }
 
     private boolean isTopLevelTask(DBObject dbTask, Map<String, Task> alreadyReadTasks, boolean buildingPartOfATree) {
-        return dbTask.get(PATH_KEY) == null ||
-                (buildingPartOfATree && !alreadyReadTasks.containsKey(dbTask.get(PATH_KEY)));
-    }
-
-    private void addSubtask(Task ancestorTask, Task taskToAdd, List<String> pathList) {
-        assert ancestorTask != null : "AncestorTask cannot be null. " +
-                "Did you forget about sorting tasks by path or trying to build part of a tree?";
-        if (pathList.isEmpty()) {
-            taskToAdd.setParentTask(ancestorTask);
-            ancestorTask.addSubtask(taskToAdd);
-            return;
-        }
-        String subtaskId = pathList.get(0);
-        for (Task subtask : ancestorTask.getSubtasks()) {
-            if (subtask.getId().equals(subtaskId)) {
-                addSubtask(subtask, taskToAdd, pathList.subList(1, pathList.size()));
-                return;
-            }
-        }
+        List<String> path = (List<String>) dbTask.get(PATH_KEY);
+        return path.isEmpty() ||
+                (buildingPartOfATree && !alreadyReadTasks.containsKey(path.get(path.size() - 1)));
     }
 
     public Task convertSingleDbObjectToTask(DBObject dbTask, Map<String, Tag> tagsMap) {
@@ -83,7 +96,6 @@ public class DbTasksConverter {
         }
         return tagsMap;
     }
-
 
 
 }

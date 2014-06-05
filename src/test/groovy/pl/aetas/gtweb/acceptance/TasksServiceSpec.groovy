@@ -248,7 +248,7 @@ class TasksServiceSpec extends AcceptanceTestBase {
         def response = client.post(path: "tasks/${taskBResponse.data.id}/subtasks/${taskAResponse.data.id}", headers: ['Session-Id': sessionId])
         then: "task A is saved as task's B subtask in the database"
         def taskAAfterUpdate = tasksCollection.findOne(new BasicDBObject([_id: new ObjectId(taskAResponse.data.id.toString())]))
-        taskAAfterUpdate.path == taskBResponse.data.id.toString()
+        taskAAfterUpdate.path == [taskBResponse.data.id]
         and: "200 OK is returned in response"
         response.status == 200
         and: "updated task B is returned in response (task A is subtask of task B)"
@@ -270,7 +270,7 @@ class TasksServiceSpec extends AcceptanceTestBase {
         def response = client.post(path: "tasks/${taskBResponse.data.id}/subtasks/${taskCResponse.data.id}", headers: ['Session-Id': sessionId])
         then: "task C is saved as task's B subtask in the database"
         def taskCAfterUpdate = tasksCollection.findOne(new BasicDBObject([_id: new ObjectId(taskCResponse.data.id.toString())]))
-        taskCAfterUpdate.path == taskAResponse.data.id + ',' + taskBResponse.data.id
+        taskCAfterUpdate.path == [taskAResponse.data.id, taskBResponse.data.id]
         and: "200 OK is returned in response"
         response.status == 200
     }
@@ -312,7 +312,7 @@ class TasksServiceSpec extends AcceptanceTestBase {
         client.post(path: "tasks/${taskCResponse.data.id}/subtasks/${taskBResponse.data.id}", headers: ['Session-Id': sessionId])
         then: "task B is saved as task's C subtask in the database"
         def taskBAfterUpdate = tasksCollection.findOne(new BasicDBObject([_id: new ObjectId(taskBResponse.data.id.toString())]))
-        taskBAfterUpdate.path == taskCResponse.data.id.toString()
+        taskBAfterUpdate.path == [taskCResponse.data.id]
         and: "task A should not have any subtasks"
         def response = client.get([path: 'tasks', headers: ['Session-Id': sessionId]])
         response.data.find { it.id == taskAResponse.data.id }.subtasks.isEmpty()
