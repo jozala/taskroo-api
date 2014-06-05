@@ -49,13 +49,16 @@ public class TaskDao {
             LOGGER.error("Trying to insert task without ownerId set");
             throw new UnsupportedDataOperationException("Trying to insert task without ownerId set");
         }
+        if (task.getParentTask() != null) {
+            LOGGER.error("Trying to insert task with subtask what is unsupported.");
+            throw new UnsupportedDataOperationException("Cannot insert task with parent task set. Insert top level task and move it to subtask instead.");
+        }
 
         if (task.getCreatedDate() == null) {
             task.setCreatedDate(new Date());
         }
 
         List<Tag> allUserTags = tagDao.getAllTagsByOwnerId(task.getOwnerId());
-        String parentTaskId = task.getParentTask() != null ? task.getParentTask().getId() : null;
 
         Set<String> tagsIdsForTask = getTagsIds(task.getTags(), allUserTags);
         DBObject taskDbObject = BasicDBObjectBuilder.start(TITLE_KEY, task.getTitle())
@@ -67,17 +70,16 @@ public class TaskDao {
                 .append(FINISHED_KEY, task.isFinished())
                 .append(OWNER_ID_KEY, task.getOwnerId())
                 .append(TAGS_KEY, tagsIdsForTask)
-                .append(PATH_KEY, getPath(parentTaskId))
+                .append(PATH_KEY, Collections.emptyList())
                 .get();
 
         tasksCollection.insert(taskDbObject);
 
-        // TODO here the check if parent task exists is needed as well as in TaskDao#addSubtask
         taskDbObject = updateTagsIfConcurrentTagsModificationHappen(tagsIdsForTask, taskDbObject);
         String taskId = taskDbObject.get("_id").toString();
         task.setId(taskId);
 
-        return task;
+        return dbTasksConverter.convertToTasksTree(Collections.singletonList(taskDbObject), allUserTags, true).iterator().next();
     }
 
     private Set<String> getTagsIds(Set<Tag> taskTags, List<Tag> allUserTags) {
@@ -105,13 +107,18 @@ public class TaskDao {
         return tagId;
     }
 
-    private List<String> getPath(String parentTaskId) {
-        if (parentTaskId == null) {
+    private List<String> getPath(String ownerId, String taskId) {
+        if (taskId == null) {
             return Collections.emptyList();
         }
 
-        DBObject dbPath = tasksCollection.findOne(new BasicDBObject("_id", new ObjectId(parentTaskId)),
+        DBObject dbPath = tasksCollection.findOne(new BasicDBObject("_id", new ObjectId(taskId)).append(OWNER_ID_KEY, ownerId),
                 new BasicDBObject(PATH_KEY, true));
+
+        if (dbPath == null) {
+            LOGGER.warn("Cannot find path for task with id {} of user {} because task does not exists in database", taskId, ownerId);
+            throw new InvalidDaoOperationException("Cannot find path for task with id " + taskId + " of user " + ownerId + " because task does not exist in database");
+        }
 
         List<String> parentPath = (List<String>)dbPath.get(PATH_KEY);
         parentPath.add(dbPath.get("_id").toString());
@@ -200,7 +207,7 @@ public class TaskDao {
             throw new UnsupportedDataOperationException("Cannot add task as subtask to itself");
         }
 
-        List<String> parentTaskPath = getPath(parentId);
+        List<String> parentTaskPath = getPath(ownerId, parentId);
         if (parentTaskPath.contains(subtaskId)) {
             LOGGER.warn("POSSIBLE CLIENT MALFUNCTION: Cannot add task (id: {}) as subtask to one of its subtasks (id: {})", subtaskId, parentId);
             throw new UnsupportedDataOperationException("Cannot add task as subtask to one of its subtasks");
@@ -238,10 +245,10 @@ public class TaskDao {
         }
     }
 
-    private boolean taskDoesNotExistInDb(String ownerId, String parentId) {
-        DBObject findParentByIdAndOwnerIdQuery = QueryBuilder.start("_id").is(new ObjectId(parentId))
+    private boolean taskDoesNotExistInDb(String ownerId, String taskId) {
+        DBObject findTaskByIdAndOwnerIdQuery = QueryBuilder.start("_id").is(new ObjectId(taskId))
                 .and(TaskDao.OWNER_ID_KEY).is(ownerId).get();
-        return tasksCollection.count(findParentByIdAndOwnerIdQuery) == 0;
+        return tasksCollection.count(findTaskByIdAndOwnerIdQuery) == 0;
     }
 
     private Task getTask(String ownerId, String taskId) throws NonExistingResourceOperationException {

@@ -27,9 +27,6 @@ class TaskDaoTest extends DaoTestBase {
         given:
         tagsCollection.insert(new BasicDBObject([name:'tagA', owner_id:'mariusz', color:null, visible_in_workview:false]))
         tagsCollection.insert(new BasicDBObject([name:'tagB', owner_id:'mariusz', color:'black', visible_in_workview:true]))
-        def parentTaskOne = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('parentTask1').setCreatedDate(new Date()).build()
-        def parentTaskTwo = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('parentTask2').setCreatedDate(new Date()).setParentTask(parentTaskOne).build()
-        def parentTaskThree = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('parentTask3').setCreatedDate(new Date()).setParentTask(parentTaskTwo).build()
         def task = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle')
                 .setCreatedDate(new Date())
                 .setDescription('desc')
@@ -38,13 +35,9 @@ class TaskDaoTest extends DaoTestBase {
                 .setFinished(false)
                 .setStartDate(DateMidnight.parse('2014-02-27').toDate())
                 .setDueDate(DateMidnight.parse('2014-03-13').toDate())
-                .setParentTask(parentTaskThree)
                 .build()
         when:
-        taskDao.insert(parentTaskOne)
-        taskDao.insert(parentTaskTwo)
-        taskDao.insert(parentTaskThree)
-        taskDao.insert(task)
+        task = taskDao.insert(task)
         then:
         DBObject taskFromDb = tasksCollection.findOne(new BasicDBObject('_id', new ObjectId(task.getId())))
         taskFromDb.owner_id == 'mariusz'
@@ -55,7 +48,20 @@ class TaskDaoTest extends DaoTestBase {
         taskFromDb.closed_date == null
         taskFromDb.start_date == DateMidnight.parse('2014-02-27').toDate()
         taskFromDb.due_date == DateMidnight.parse('2014-03-13').toDate()
-        taskFromDb.path == [parentTaskOne.id,parentTaskTwo.id,parentTaskThree.id]
+    }
+
+    def "should throw exception when trying to insert task with parent task set"() {
+        given:
+        def parentTask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle1')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate()).setId(ObjectId.get().toString())
+                .build()
+        def subtask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle2')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate()).setParentTask(parentTask)
+                .build()
+        when:
+        taskDao.insert(subtask)
+        then:
+        thrown(UnsupportedDataOperationException)
     }
 
     def "should set task id in the returned task object after insert"() {
@@ -146,10 +152,10 @@ class TaskDaoTest extends DaoTestBase {
                 .build()
         def topTask = taskDao.insert(task)
         def subtask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('subtaskTitle')
-                .setParentTask(topTask)
                 .setCreatedDate(DateTime.parse('2014-04-01T20:12:54').toDate())
                 .build()
-        taskDao.insert(subtask)
+        subtask = taskDao.insert(subtask)
+        taskDao.addSubtask('mariusz', topTask.id, subtask.id)
         when:
         def retrievedTask = taskDao.findAllByOwnerId('mariusz').first()
         then:
@@ -315,8 +321,8 @@ class TaskDaoTest extends DaoTestBase {
         def subtask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle2')
                 .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
                 .build()
-        taskDao.insert(parentTask)
-        taskDao.insert(subtask)
+        parentTask = taskDao.insert(parentTask)
+        subtask = taskDao.insert(subtask)
         when:
         taskDao.addSubtask('mariusz', parentTask.id, subtask.id)
         then:
@@ -331,8 +337,8 @@ class TaskDaoTest extends DaoTestBase {
         def subtask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle2')
                 .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
                 .build()
-        taskDao.insert(parentTask)
-        taskDao.insert(subtask)
+        parentTask = taskDao.insert(parentTask)
+        subtask = taskDao.insert(subtask)
         when:
         taskDao.addSubtask('mariusz', parentTask.id, subtask.id)
         then:
@@ -347,8 +353,8 @@ class TaskDaoTest extends DaoTestBase {
         def subtask = new Task.TaskBuilder().setOwnerId('owner1').setTitle('taskTitle2')
                 .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
                 .build()
-        taskDao.insert(parentTask)
-        taskDao.insert(subtask)
+        parentTask = taskDao.insert(parentTask)
+        subtask = taskDao.insert(subtask)
         when:
         taskDao.addSubtask('mariusz', parentTask.id, subtask.id)
         then:
@@ -366,9 +372,9 @@ class TaskDaoTest extends DaoTestBase {
         def subtask2 = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle3')
                 .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
                 .build()
-        taskDao.insert(parentTask)
-        taskDao.insert(subtask1)
-        taskDao.insert(subtask2)
+        parentTask = taskDao.insert(parentTask)
+        subtask1 = taskDao.insert(subtask1)
+        subtask2 = taskDao.insert(subtask2)
         when:
         taskDao.addSubtask('mariusz', parentTask.id, subtask1.id)
         def taskAfterUpdate = taskDao.addSubtask('mariusz', parentTask.id, subtask2.id)
@@ -390,9 +396,9 @@ class TaskDaoTest extends DaoTestBase {
         def subtask2 = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle3')
                 .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
                 .build()
-        taskDao.insert(parentTask)
-        taskDao.insert(subtask1)
-        taskDao.insert(subtask2)
+        parentTask = taskDao.insert(parentTask)
+        subtask1 = taskDao.insert(subtask1)
+        subtask2 = taskDao.insert(subtask2)
         taskDao.addSubtask('mariusz', parentTask.id, subtask1.id)
         when:
         taskDao.addSubtask('mariusz', subtask1.id, subtask2.id)
@@ -405,7 +411,7 @@ class TaskDaoTest extends DaoTestBase {
         def task = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle1')
                 .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
                 .build()
-        taskDao.insert(task)
+        task = taskDao.insert(task)
         when:
         taskDao.addSubtask('mariusz', task.id, task.id)
         then:
@@ -423,9 +429,9 @@ class TaskDaoTest extends DaoTestBase {
         def subSubtask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle3')
                 .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
                 .build()
-        taskDao.insert(parentTask)
-        taskDao.insert(subtask)
-        taskDao.insert(subSubtask)
+        parentTask = taskDao.insert(parentTask)
+        subtask = taskDao.insert(subtask)
+        subSubtask = taskDao.insert(subSubtask)
         taskDao.addSubtask('mariusz', parentTask.id, subtask.id)
         taskDao.addSubtask('mariusz', subtask.id, subSubtask.id)
         when:
@@ -448,10 +454,10 @@ class TaskDaoTest extends DaoTestBase {
         def subSubtask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle3')
                 .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
                 .build()
-        taskDao.insert(topParentTask)
-        taskDao.insert(parentTask)
-        taskDao.insert(subtask)
-        taskDao.insert(subSubtask)
+        topParentTask = taskDao.insert(topParentTask)
+        parentTask = taskDao.insert(parentTask)
+        subtask = taskDao.insert(subtask)
+        subSubtask = taskDao.insert(subSubtask)
         taskDao.addSubtask('mariusz', parentTask.id, subtask.id)
         taskDao.addSubtask('mariusz', subtask.id, subSubtask.id)
         when:

@@ -80,7 +80,7 @@ public class DbTasksConverter {
                 .setFinished((boolean) dbTask.get(FINISHED_KEY));
 
         if (dbTask.get(TAGS_KEY) != null) {
-            for (String tagId : (List<String>) dbTask.get(TAGS_KEY)) {
+            for (String tagId : (Collection<String>) dbTask.get(TAGS_KEY)) {
                 builder.addTag(tagsMap.get(tagId));
             }
         }
