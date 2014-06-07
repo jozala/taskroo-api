@@ -138,10 +138,7 @@ public class TaskDao {
             LOGGER.warn("Task id is invalid: {} (ownerId: {}). Nothing has been removed.", taskId, ownerId);
             throw new NonExistingResourceOperationException("Invalid task id: " + taskId);
         }
-        // TODO should also remove all subtasks of this task
-        DBObject findByIdAndOwnerIdQuery = QueryBuilder.start("_id").is(new ObjectId(taskId))
-                .and(TaskDao.OWNER_ID_KEY).is(ownerId).get();
-        WriteResult result = tasksCollection.remove(findByIdAndOwnerIdQuery);
+        WriteResult result = tasksCollection.remove(findTaskWithSubtasksQuery(ownerId, taskId));
         if (result.getN() == 0) {
             LOGGER.info("Task with id {} and ownerId {} not found in DB. Nothing has been removed.", taskId, ownerId);
             throw new NonExistingResourceOperationException("Task with id " + taskId + "and ownerId " + ownerId + " not found in DB");
@@ -197,7 +194,7 @@ public class TaskDao {
         return dbTaskAfterUpdate;
     }
 
-    public Task addSubtask(String ownerId, String parentId, String subtaskId) throws NonExistingResourceOperationException {
+    public Task addSubtask(String ownerId, String parentId, String subtaskId) throws NonExistingResourceOperationException, ConcurrentTasksModificationException {
         if (taskDoesNotExistInDb(ownerId, parentId)) {
             LOGGER.warn("Parent task with id: {} does not exists for customer with id {}", parentId, ownerId);
             throw new NonExistingResourceOperationException("Parent task with id: " + parentId + " does not exists for customer with id: " + ownerId);
@@ -220,13 +217,15 @@ public class TaskDao {
         if (!allTasksExists(parentTaskPath)) {
             LOGGER.warn("Concurrent task hierarchy modification. Task with id {} and all its subtasks will be removed, because new parent task has been removed.", subtaskId);
             tasksCollection.remove(findTaskWithSubtasksQuery(ownerId, subtaskId));
-            // TODO throw some exception to return 400 or some other error
+            throw new ConcurrentTasksModificationException("Ascendants tasks have been removed when processing this request. " +
+                    "Tasks have been removed to keep data consistent.");
         }
 
         if (!parentTaskPath.equals(getPath(ownerId, parentId, true))) {
             LOGGER.warn("Concurrent task hierarchy modification. Task with id {} will be moved to top level, because new ancestors hierarchy has changed.", subtaskId);
             moveTaskWithSubtasksToTopLevel(ownerId, subtaskId);
-            // TODO throw some exception to return 400 or some other error
+            throw new ConcurrentTasksModificationException("Ascendants tasks have been shuffled when processing this request. " +
+                    "Task has been move to top-level to keep data consistent.");
         }
 
 

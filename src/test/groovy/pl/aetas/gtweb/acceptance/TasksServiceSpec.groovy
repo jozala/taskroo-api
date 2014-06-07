@@ -131,6 +131,26 @@ class TasksServiceSpec extends AcceptanceTestBase {
         response.status == 404
     }
 
+    def "should remove all subtasks of removed tasks when removing task"() {
+        given: 'user exists in session'
+        def sessionId = createSessionWithUser(TEST_USER_ID)
+        and: 'user has task with subtasks'
+        def topLevelTaskResponse = client.post(path: 'tasks', body: '{"title": "topLevelTask"}', requestContentType: ContentType.JSON,
+                headers: ['Session-Id': sessionId])
+        def subtaskResponse = client.post(path: 'tasks', body: '{"title": "subTask"}',
+                requestContentType: ContentType.JSON, headers: ['Session-Id': sessionId])
+        def subSubtaskResponse = client.post(path: 'tasks', body: '{"title": "subSubTask"}',
+                requestContentType: ContentType.JSON, headers: ['Session-Id': sessionId])
+        client.post(path: "tasks/${topLevelTaskResponse.data.id}/subtasks/${subtaskResponse.data.id}", headers: ['Session-Id': sessionId])
+        client.post(path: "tasks/${subtaskResponse.data.id}/subtasks/${subSubtaskResponse.data.id}", headers: ['Session-Id': sessionId])
+        when: 'client sends request to delete top-level task'
+        client.delete([path: "tasks/${topLevelTaskResponse.data.id}", headers: ['Session-Id': sessionId]])
+        then: 'subtask should not exists in DB'
+        tasksCollection.count(new BasicDBObject('_id', new ObjectId(subtaskResponse.data.id))) == 0
+        and: 'subSubtask should not exists in DB'
+        tasksCollection.count(new BasicDBObject('_id', new ObjectId(subSubtaskResponse.data.id))) == 0
+    }
+
     def "should update task with given data when client sends PUT request with task id and task in JSON"() {
         given: "user is authenticated"
         def sessionId = createSessionWithUser(TEST_USER_ID)

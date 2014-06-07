@@ -182,6 +182,29 @@ class TaskDaoTest extends DaoTestBase {
         tasksCollection.count(new BasicDBObject("_id", new ObjectId(taskAfterUpdate.id))) == 0
     }
 
+    def "should remove all subtasks of task when removing task"() {
+        given:
+        def parentTask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle1')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
+                .build()
+        def subtask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle2')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
+                .build()
+        def subSubtask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle3')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
+                .build()
+        parentTask = taskDao.insert(parentTask)
+        subtask = taskDao.insert(subtask)
+        subSubtask = taskDao.insert(subSubtask)
+        taskDao.addSubtask('mariusz', parentTask.id, subtask.id)
+        taskDao.addSubtask('mariusz', subtask.id, subSubtask.id)
+        when:
+        taskDao.remove('mariusz', parentTask.id)
+        then:
+        tasksCollection.getCount(new BasicDBObject('_id', new ObjectId(subtask.id))) == 0
+        tasksCollection.getCount(new BasicDBObject('_id', new ObjectId(subSubtask.id))) == 0
+    }
+
     def "should throw exception when trying to remove task and task is owned by another customer"() {
         given:
         def task = new Task.TaskBuilder().setOwnerId('onwer1').setTitle('taskTitle').setCreatedDate(new Date()).build()

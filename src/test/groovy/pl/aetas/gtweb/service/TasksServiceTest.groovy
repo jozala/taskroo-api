@@ -1,9 +1,7 @@
 package pl.aetas.gtweb.service
+
 import org.bson.types.ObjectId
-import pl.aetas.gtweb.data.NonExistingResourceOperationException
-import pl.aetas.gtweb.data.TagDao
-import pl.aetas.gtweb.data.TaskDao
-import pl.aetas.gtweb.data.UnsupportedDataOperationException
+import pl.aetas.gtweb.data.*
 import pl.aetas.gtweb.domain.Tag
 import pl.aetas.gtweb.domain.Task
 import spock.lang.Specification
@@ -159,7 +157,7 @@ class TasksServiceTest extends Specification {
         given:
         def task = new Task.TaskBuilder().setOwnerId(TEST_USER_ID).setTitle('taskTitle').setCreatedDate(new Date()).build()
         def taskAfterUpdate = new Task.TaskBuilder().setOwnerId(TEST_USER_ID).setTitle('taskTitle').setCreatedDate(new Date()).build()
-        taskDao.update(_,_,_) >> taskAfterUpdate
+        taskDao.update(_, _, _) >> taskAfterUpdate
         when:
         def response = tasksService.update(securityContext, 'someTaskId', task)
         then:
@@ -205,7 +203,9 @@ class TasksServiceTest extends Specification {
         given:
         def parentTaskId = ObjectId.get().toString()
         def subtaskId = ObjectId.get().toString()
-        taskDao.addSubtask(TEST_USER_ID, parentTaskId, subtaskId) >> { throw new NonExistingResourceOperationException('') }
+        taskDao.addSubtask(TEST_USER_ID, parentTaskId, subtaskId) >> {
+            throw new NonExistingResourceOperationException('')
+        }
         when:
         def response = tasksService.addSubtask(securityContext, parentTaskId, subtaskId)
         then:
@@ -243,5 +243,19 @@ class TasksServiceTest extends Specification {
         def response = tasksService.addSubtask(securityContext, parentTaskId, subtaskId)
         then:
         response.entity == parentTaskAfterUpdateMock
+    }
+
+    def "should return 409 Conflict when DAO throws ConcurrentTaskModificationException"() {
+        given:
+        def parentTaskId = ObjectId.get().toString()
+        def subtaskId = ObjectId.get().toString()
+        taskDao.addSubtask(TEST_USER_ID, parentTaskId, subtaskId) >> {
+            throw new ConcurrentTasksModificationException('')
+        }
+        when:
+        def response = tasksService.addSubtask(securityContext, parentTaskId, subtaskId)
+        then:
+        response.status == 409
+        response.entity != null
     }
 }

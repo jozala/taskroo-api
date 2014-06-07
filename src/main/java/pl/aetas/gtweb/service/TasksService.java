@@ -64,6 +64,7 @@ public class TasksService {
     @DELETE
     @Path("{taskId}")
     public Response delete(@Context SecurityContext sc, @PathParam("taskId") String id) {
+        LOGGER.debug("Delete task request received");
         try {
             taskDao.remove(sc.getUserPrincipal().getName(), id);
         } catch(NonExistingResourceOperationException e) {
@@ -77,6 +78,7 @@ public class TasksService {
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
     public Response update(@Context SecurityContext sc, @PathParam("taskId") String id, Task task) {
+        LOGGER.debug("Update task request received");
         for (Tag tag : task.getTags()) {
             tag.setOwnerId(sc.getUserPrincipal().getName());
             // TODO replace multiple calls to DB with one tags or task validation call do DAO (definitely do task validation)
@@ -109,6 +111,8 @@ public class TasksService {
         } catch (UnsupportedDataOperationException e) {
             LOGGER.warn("Unsupported data operation when trying to add subtask", e);
             throw new WebApplicationException(Response.Status.BAD_REQUEST);
+        } catch (ConcurrentTasksModificationException e) {
+            return Response.status(Response.Status.CONFLICT).entity(e.getMessage()).build();
         }
 
     }

@@ -19,7 +19,6 @@ public class SessionDao {
         this.sessionsCollection = sessionsCollection;
     }
 
-    // TODO create Session always with TTL for 30 minutes
     public Session findOne(String sessionId) {
         DBObject sessionDbObject = sessionsCollection.findOne(QueryBuilder.start("_id").is(sessionId).get());
         if (sessionDbObject == null) {
