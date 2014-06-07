@@ -145,13 +145,11 @@ public class TaskDao {
         }
     }
 
-    // TODO taskId should not be needed (id should be already in the task)
-    public Task update(String ownerId, String taskId, Task task) throws NonExistingResourceOperationException {
+    public Task update(String ownerId, Task task) throws NonExistingResourceOperationException {
         Objects.requireNonNull(ownerId);
-        Objects.requireNonNull(taskId);
         Objects.requireNonNull(task);
 
-        DBObject findByIdAndOwnerIdQuery = QueryBuilder.start("_id").is(new ObjectId(taskId))
+        DBObject findByIdAndOwnerIdQuery = QueryBuilder.start("_id").is(new ObjectId(task.getId()))
                 .and(TaskDao.OWNER_ID_KEY).is(ownerId).get();
 
         List<Tag> allUserTags = tagDao.getAllTagsByOwnerId(ownerId);
@@ -169,8 +167,8 @@ public class TaskDao {
                 new BasicDBObject("$set", taskDbObject), true, false);
 
         if (dbTaskAfterUpdate == null) {
-            LOGGER.info("Task with id {} and ownerId {} not found in DB. Nothing has been updated.", taskId, ownerId);
-            throw new NonExistingResourceOperationException("Task with id " + taskId + "and ownerId " + ownerId + " not found in DB");
+            LOGGER.info("Task with id {} and ownerId {} not found in DB. Nothing has been updated.", task.getId(), ownerId);
+            throw new NonExistingResourceOperationException("Task with id " + task.getId() + "and ownerId " + ownerId + " not found in DB");
         }
 
         dbTaskAfterUpdate = updateTagsIfConcurrentTagsModificationHappen(tagsIdsForTask, dbTaskAfterUpdate);

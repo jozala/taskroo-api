@@ -141,7 +141,7 @@ class TasksServiceTest extends Specification {
         when:
         tasksService.update(securityContext, 'someTaskId', task)
         then:
-        1 * taskDao.update(TEST_USER_ID, 'someTaskId', task)
+        1 * taskDao.update(TEST_USER_ID, task)
     }
 
     def "should return 200 when task has been updated"() {
@@ -157,7 +157,7 @@ class TasksServiceTest extends Specification {
         given:
         def task = new Task.TaskBuilder().setOwnerId(TEST_USER_ID).setTitle('taskTitle').setCreatedDate(new Date()).build()
         def taskAfterUpdate = new Task.TaskBuilder().setOwnerId(TEST_USER_ID).setTitle('taskTitle').setCreatedDate(new Date()).build()
-        taskDao.update(_, _, _) >> taskAfterUpdate
+        taskDao.update(_, _) >> taskAfterUpdate
         when:
         def response = tasksService.update(securityContext, 'someTaskId', task)
         then:
@@ -168,7 +168,7 @@ class TasksServiceTest extends Specification {
     def "should return 404 (not found) when trying to update non-existing task"() {
         given:
         def task = new Task.TaskBuilder().setOwnerId(TEST_USER_ID).setTitle('taskTitle').setCreatedDate(new Date()).build()
-        taskDao.update(TEST_USER_ID, 'someTaskId', task) >> { throw new NonExistingResourceOperationException('') }
+        taskDao.update(TEST_USER_ID, task) >> { throw new NonExistingResourceOperationException('') }
         when:
         def response = tasksService.update(securityContext, 'someTaskId', task)
         then:

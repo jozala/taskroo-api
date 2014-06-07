@@ -243,6 +243,7 @@ class TaskDaoTest extends DaoTestBase {
                 .build()
         task = taskDao.insert(task);
         def taskToUpdate = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('updatedTaskTitle')
+                .setId(task.id)
                 .setCreatedDate(DateTime.parse('2014-02-21T12:32:11').toDate())
                 .setDescription('updated description')
                 .addTag(new Tag('123', 'mariusz', 'tagA', null, false))
@@ -253,7 +254,7 @@ class TaskDaoTest extends DaoTestBase {
                 .setFinished(true)
                 .build()
         when:
-        taskDao.update('mariusz', task.id, taskToUpdate)
+        taskDao.update('mariusz', taskToUpdate)
         then:
         def retrievedTask = taskDao.findAllByOwnerId('mariusz').first()
         retrievedTask.id == task.id
@@ -276,10 +277,10 @@ class TaskDaoTest extends DaoTestBase {
                 .build()
         task = taskDao.insert(task);
         def taskToUpdate = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('updatedTaskTitle')
-                .setCreatedDate(DateTime.parse('2014-02-25T12:32:11').toDate())
+                .setCreatedDate(DateTime.parse('2014-02-25T12:32:11').toDate()).setId(task.id)
                 .build()
         when:
-        taskDao.update('mariusz', task.id, taskToUpdate)
+        taskDao.update('mariusz', taskToUpdate)
         then:
         def retrievedTask = taskDao.findAllByOwnerId('mariusz').first()
         retrievedTask.createdDate == DateTime.parse('2014-01-21T12:32:11').toDate()
@@ -295,9 +296,10 @@ class TaskDaoTest extends DaoTestBase {
         task = taskDao.insert(task);
         def taskToUpdate = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('updatedTaskTitle')
                 .setCreatedDate(DateTime.parse('2014-02-25T12:32:11').toDate())
+                .setId(task.id)
                 .build()
         when:
-        def taskAfterUpdate = taskDao.update('mariusz', task.id, taskToUpdate)
+        def taskAfterUpdate = taskDao.update('mariusz', taskToUpdate)
         then:
         taskAfterUpdate.id == task.id
         taskAfterUpdate.title == taskToUpdate.title
@@ -309,18 +311,7 @@ class TaskDaoTest extends DaoTestBase {
                 .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
                 .build()
         when:
-        taskDao.update(null, ObjectId.get().toString(), task)
-        then:
-        thrown(NullPointerException)
-    }
-
-    def "should throw exception when trying to update task without task id given"() {
-        given:
-        def task = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle')
-                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
-                .build()
-        when:
-        taskDao.update('mariusz', null, task)
+        taskDao.update(null, task)
         then:
         thrown(NullPointerException)
     }
@@ -329,9 +320,10 @@ class TaskDaoTest extends DaoTestBase {
         given:
         def task = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle')
                 .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
+                .setId(ObjectId.get().toString())
                 .build()
         when:
-        taskDao.update('mariusz', ObjectId.get().toString(), task)
+        taskDao.update('mariusz', task)
         then:
         thrown(NonExistingResourceOperationException)
     }

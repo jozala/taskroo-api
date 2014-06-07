@@ -79,6 +79,7 @@ public class TasksService {
     @Consumes(MediaType.APPLICATION_JSON)
     public Response update(@Context SecurityContext sc, @PathParam("taskId") String id, Task task) {
         LOGGER.debug("Update task request received");
+        task.setId(id);
         for (Tag tag : task.getTags()) {
             tag.setOwnerId(sc.getUserPrincipal().getName());
             // TODO replace multiple calls to DB with one tags or task validation call do DAO (definitely do task validation)
@@ -88,7 +89,7 @@ public class TasksService {
             }
         }
         try {
-            Task taskAfterUpdate = taskDao.update(sc.getUserPrincipal().getName(), id, task);
+            Task taskAfterUpdate = taskDao.update(sc.getUserPrincipal().getName(), task);
             return Response.ok(taskAfterUpdate).build();
         } catch (NonExistingResourceOperationException e) {
             return Response.status(Response.Status.NOT_FOUND).build();
