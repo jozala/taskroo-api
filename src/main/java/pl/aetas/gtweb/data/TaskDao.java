@@ -10,7 +10,6 @@ import pl.aetas.gtweb.domain.Task;
 
 import javax.inject.Inject;
 import java.util.*;
-import java.util.regex.Pattern;
 
 @Repository
 public class TaskDao {
@@ -107,7 +106,7 @@ public class TaskDao {
         return tagId;
     }
 
-    private List<String> getPath(String ownerId, String taskId) {
+    private List<String> getPath(String ownerId, String taskId, boolean includingTaskId) throws NonExistingResourceOperationException {
         if (taskId == null) {
             return Collections.emptyList();
         }
@@ -117,11 +116,13 @@ public class TaskDao {
 
         if (dbPath == null) {
             LOGGER.warn("Cannot find path for task with id {} of user {} because task does not exists in database", taskId, ownerId);
-            throw new InvalidDaoOperationException("Cannot find path for task with id " + taskId + " of user " + ownerId + " because task does not exist in database");
+            throw new NonExistingResourceOperationException("Cannot find path for task with id " + taskId + " of user " + ownerId + " because task does not exist in database");
         }
 
         List<String> parentPath = (List<String>)dbPath.get(PATH_KEY);
-        parentPath.add(dbPath.get("_id").toString());
+        if (includingTaskId) {
+            parentPath.add(dbPath.get("_id").toString());
+        }
         return parentPath;
     }
 
@@ -207,42 +208,56 @@ public class TaskDao {
             throw new UnsupportedDataOperationException("Cannot add task as subtask to itself");
         }
 
-        List<String> parentTaskPath = getPath(ownerId, parentId);
+        List<String> parentTaskPath = getPath(ownerId, parentId, true);
         if (parentTaskPath.contains(subtaskId)) {
             LOGGER.warn("POSSIBLE CLIENT MALFUNCTION: Cannot add task (id: {}) as subtask to one of its subtasks (id: {})", subtaskId, parentId);
             throw new UnsupportedDataOperationException("Cannot add task as subtask to one of its subtasks");
         }
 
-        DBObject findSubtaskByIdAndOwnerIdQuery = QueryBuilder.start("_id").is(new ObjectId(subtaskId))
-                .and(TaskDao.OWNER_ID_KEY).is(ownerId).get();
+        moveTaskWithSubtasksToTopLevel(ownerId, subtaskId);
+        moveTaskWithSubtasksToNewPath(ownerId, subtaskId, parentTaskPath);
 
-
-        // TODO idea to solve this is to keep path as an array and add to the beginning of this array
-        // TODO think also about moving task A with subtasks when A is already in path Z,W (both Z and W should be added to paths of all tasks)
-        // TODO see solution in nvAlt note
-        DBObject task = tasksCollection.findAndModify(findSubtaskByIdAndOwnerIdQuery, null, null, false,
-                new BasicDBObject("$set", new BasicDBObject(PATH_KEY, parentTaskPath)), true, false);
-
-        if (task == null) {
-            LOGGER.warn("Parent task with id: {} does not exists for customer with id {}", parentId, ownerId);
-            throw new NonExistingResourceOperationException("Task with id: " + parentId + " does not exists for customer with id: " + ownerId);
+        if (!allTasksExists(parentTaskPath)) {
+            LOGGER.warn("Concurrent task hierarchy modification. Task with id {} and all its subtasks will be removed, because new parent task has been removed.", subtaskId);
+            tasksCollection.remove(findTaskWithSubtasksQuery(ownerId, subtaskId));
+            // TODO throw some exception to return 400 or some other error
         }
 
-        updateAllDescendantsWithNewPath(ownerId, subtaskId, parentTaskPath);
+        if (!parentTaskPath.equals(getPath(ownerId, parentId, true))) {
+            LOGGER.warn("Concurrent task hierarchy modification. Task with id {} will be moved to top level, because new ancestors hierarchy has changed.", subtaskId);
+            moveTaskWithSubtasksToTopLevel(ownerId, subtaskId);
+            // TODO throw some exception to return 400 or some other error
+        }
 
 
         return getTask(ownerId, parentId);
     }
 
-    private void updateAllDescendantsWithNewPath(String ownerId, String movedSubtaskId, List<String> parentTaskPath) {
-        DBObject findAllSubtasksOfSubtaskQuery = QueryBuilder.start(OWNER_ID_KEY).is(ownerId).and(PATH_KEY).is(Pattern.compile(movedSubtaskId)).get();
-        DBCursor subtasksOfSubtask = tasksCollection.find(findAllSubtasksOfSubtaskQuery, new BasicDBObject(PATH_KEY, true));
-        for (DBObject subtaskOfSubtask : subtasksOfSubtask) {
-            List<String> newSubtaskPath = new LinkedList<>(parentTaskPath);
-            newSubtaskPath.addAll((Collection) subtaskOfSubtask.get(PATH_KEY));
-            ObjectId subtaskOfSubtaskId = new ObjectId(subtaskOfSubtask.get("_id").toString());
-            tasksCollection.findAndModify(new BasicDBObject("_id", subtaskOfSubtaskId), new BasicDBObject("$set", new BasicDBObject(PATH_KEY, newSubtaskPath)));
+    private DBObject findTaskWithSubtasksQuery(String ownerId, String taskId) {
+        DBObject findSubtaskByIdAndOwnerIdQuery = QueryBuilder.start("_id").is(new ObjectId(taskId)).and(TaskDao.OWNER_ID_KEY).is(ownerId).get();
+        DBObject findSubtasksOfSubtaskQuery = QueryBuilder.start(PATH_KEY).is(taskId).get();
+        return QueryBuilder.start().or(findSubtaskByIdAndOwnerIdQuery, findSubtasksOfSubtaskQuery).get();
+    }
+
+    private boolean allTasksExists(Collection<String> tasksIds) {
+        List<ObjectId> objectIds = new ArrayList<>(tasksIds.size());
+        for (String ancestorId : tasksIds) {
+            objectIds.add(new ObjectId(ancestorId));
         }
+        DBObject findTasksByIdQuery = QueryBuilder.start("_id").in(objectIds).get();
+        return (tasksCollection.count(findTasksByIdQuery) == tasksIds.size());
+    }
+
+    private void moveTaskWithSubtasksToNewPath(String ownerId, String taskId, List<String> newParentPath) {
+        BasicDBObject prependNewParentPath = new BasicDBObject("$push", new BasicDBObject(PATH_KEY, new BasicDBObject("$each", newParentPath).append("$position", 0)));
+        tasksCollection.update(findTaskWithSubtasksQuery(ownerId, taskId), prependNewParentPath, false, true);
+    }
+
+    private void moveTaskWithSubtasksToTopLevel(String ownerId, String taskId) throws NonExistingResourceOperationException {
+        DBObject findSubtaskWithItsSubtasksQuery = findTaskWithSubtasksQuery(ownerId, taskId);
+        List<String> previousTaskPath = getPath(ownerId, taskId, false);
+        BasicDBObject removeHigherLevelTasksFromPath = new BasicDBObject("$pullAll", new BasicDBObject(PATH_KEY, previousTaskPath));
+        tasksCollection.update(findSubtaskWithItsSubtasksQuery, removeHigherLevelTasksFromPath, false, true);
     }
 
     private boolean taskDoesNotExistInDb(String ownerId, String taskId) {
