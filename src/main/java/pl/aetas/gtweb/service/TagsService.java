@@ -54,8 +54,7 @@ public class TagsService {
         try {
             tagDao.remove(ownerId, tagName);
         } catch (NonExistingResourceOperationException e) {
-            // TODO should be better 404 ?
-            return Response.status(Response.Status.BAD_REQUEST).build();
+            return Response.status(Response.Status.NOT_FOUND).build();
         }
         return Response.noContent().build();
     }

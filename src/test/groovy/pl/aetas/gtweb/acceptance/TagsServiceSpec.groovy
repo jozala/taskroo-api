@@ -73,12 +73,12 @@ class TagsServiceSpec extends AcceptanceTestBase {
         response.status == 204
     }
 
-    def "should return 400 (bad request) when trying to remove non-existing tag"() {
+    def "should return 404 (not found) when trying to remove non-existing tag"() {
         when: "client sends DELETE request with non-existing tag id"
         def sessionId = createSessionWithUser(TEST_USER_ID)
         def response = client.delete(path: 'tags/nonExisingTagId', headers: ['Session-Id': sessionId])
-        then: "response is 400 (bad request)"
-        response.status == 400
+        then: "response is 404 (not found)"
+        response.status == 404
     }
 
     def "should remove tag from all tasks when removing tag"() {

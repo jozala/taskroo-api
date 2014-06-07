@@ -88,14 +88,14 @@ class TagsServiceTest extends Specification {
         1 * tagDao.remove('ownerId', 'someTagName')
     }
 
-    def "should return 400 when trying to delete tag which does not exist"() {
+    def "should return 404 when trying to delete tag which does not exist"() {
         given:
         principal.getName() >> 'ownerId'
         tagDao.remove(_, _) >> { throw new NonExistingResourceOperationException('') }
         when:
         def response = tagsService.delete(securityContext, 'someTagName')
         then:
-        response.status == 400
+        response.status == 404
     }
 
     def "should return 204 when tag has been deleted correctly"() {
