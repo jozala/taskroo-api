@@ -14,6 +14,7 @@ import java.util.*;
 @Repository
 public class TaskDao {
 
+    public static final String ID_KEY = "_id";
     private static Logger LOGGER = LogManager.getLogger();
 
     public static final String DESCRIPTION_KEY = "description";
@@ -75,7 +76,7 @@ public class TaskDao {
         tasksCollection.insert(taskDbObject);
 
         taskDbObject = updateTagsIfConcurrentTagsModificationHappen(tagsIdsForTask, taskDbObject);
-        String taskId = taskDbObject.get("_id").toString();
+        String taskId = taskDbObject.get(ID_KEY).toString();
         task.setId(taskId);
 
         return dbTasksConverter.convertToTasksTree(Collections.singletonList(taskDbObject), allUserTags, true).iterator().next();
@@ -111,7 +112,7 @@ public class TaskDao {
             return Collections.emptyList();
         }
 
-        DBObject dbPath = tasksCollection.findOne(new BasicDBObject("_id", new ObjectId(taskId)).append(OWNER_ID_KEY, ownerId),
+        DBObject dbPath = tasksCollection.findOne(new BasicDBObject(ID_KEY, new ObjectId(taskId)).append(OWNER_ID_KEY, ownerId),
                 new BasicDBObject(PATH_KEY, true));
 
         if (dbPath == null) {
@@ -121,7 +122,7 @@ public class TaskDao {
 
         List<String> parentPath = (List<String>)dbPath.get(PATH_KEY);
         if (includingTaskId) {
-            parentPath.add(dbPath.get("_id").toString());
+            parentPath.add(dbPath.get(ID_KEY).toString());
         }
         return parentPath;
     }
@@ -149,7 +150,7 @@ public class TaskDao {
         Objects.requireNonNull(ownerId);
         Objects.requireNonNull(task);
 
-        DBObject findByIdAndOwnerIdQuery = QueryBuilder.start("_id").is(new ObjectId(task.getId()))
+        DBObject findByIdAndOwnerIdQuery = QueryBuilder.start(ID_KEY).is(new ObjectId(task.getId()))
                 .and(TaskDao.OWNER_ID_KEY).is(ownerId).get();
 
         List<Tag> allUserTags = tagDao.getAllTagsByOwnerId(ownerId);
@@ -182,11 +183,13 @@ public class TaskDao {
 
     private DBObject updateTagsIfConcurrentTagsModificationHappen(Set<String> tagsIdsForTask,
                                                                   DBObject dbTaskAfterUpdate) {
-        BasicDBObject findByIdQuery = new BasicDBObject("_id", dbTaskAfterUpdate.get("id"));
+        BasicDBObject findByIdQuery = new BasicDBObject(ID_KEY, dbTaskAfterUpdate.get(ID_KEY));
         Set<String> tagsRemovedInTheMeanTime = tagDao.findNonExistingTags(tagsIdsForTask);
         if (!tagsRemovedInTheMeanTime.isEmpty()) {
+            LOGGER.info("Some tags have been removed in the time of processing task change/create (id={}). " +
+                    "These tags will be removed from task: {}", dbTaskAfterUpdate.get(ID_KEY), tagsRemovedInTheMeanTime);
             tagsIdsForTask.removeAll(tagsRemovedInTheMeanTime);
-            dbTaskAfterUpdate = tasksCollection.findAndModify(findByIdQuery, null, null, false,
+            return tasksCollection.findAndModify(findByIdQuery, null, null, false,
                     new BasicDBObject("$set", new BasicDBObject(TAGS_KEY, tagsIdsForTask)), true, false);
         }
         return dbTaskAfterUpdate;
@@ -231,7 +234,7 @@ public class TaskDao {
     }
 
     private DBObject findTaskWithSubtasksQuery(String ownerId, String taskId) {
-        DBObject findSubtaskByIdAndOwnerIdQuery = QueryBuilder.start("_id").is(new ObjectId(taskId)).and(TaskDao.OWNER_ID_KEY).is(ownerId).get();
+        DBObject findSubtaskByIdAndOwnerIdQuery = QueryBuilder.start(ID_KEY).is(new ObjectId(taskId)).and(TaskDao.OWNER_ID_KEY).is(ownerId).get();
         DBObject findSubtasksOfSubtaskQuery = QueryBuilder.start(PATH_KEY).is(taskId).get();
         return QueryBuilder.start().or(findSubtaskByIdAndOwnerIdQuery, findSubtasksOfSubtaskQuery).get();
     }
@@ -241,7 +244,7 @@ public class TaskDao {
         for (String ancestorId : tasksIds) {
             objectIds.add(new ObjectId(ancestorId));
         }
-        DBObject findTasksByIdQuery = QueryBuilder.start("_id").in(objectIds).get();
+        DBObject findTasksByIdQuery = QueryBuilder.start(ID_KEY).in(objectIds).get();
         return (tasksCollection.count(findTasksByIdQuery) == tasksIds.size());
     }
 
@@ -258,13 +261,13 @@ public class TaskDao {
     }
 
     private boolean taskDoesNotExistInDb(String ownerId, String taskId) {
-        DBObject findTaskByIdAndOwnerIdQuery = QueryBuilder.start("_id").is(new ObjectId(taskId))
+        DBObject findTaskByIdAndOwnerIdQuery = QueryBuilder.start(ID_KEY).is(new ObjectId(taskId))
                 .and(TaskDao.OWNER_ID_KEY).is(ownerId).get();
         return tasksCollection.count(findTaskByIdAndOwnerIdQuery) == 0;
     }
 
     private Task getTask(String ownerId, String taskId) throws NonExistingResourceOperationException {
-        DBObject findTaskWithSubtasks = QueryBuilder.start().or(new BasicDBObject("_id", new ObjectId(taskId)),
+        DBObject findTaskWithSubtasks = QueryBuilder.start().or(new BasicDBObject(ID_KEY, new ObjectId(taskId)),
                 new BasicDBObject(PATH_KEY, taskId)).get();
         DBCursor dbTasks = tasksCollection.find(findTaskWithSubtasks);
         if (dbTasks.count() == 0) {

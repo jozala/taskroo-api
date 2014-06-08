@@ -36,6 +36,16 @@ class TasksServiceSpec extends AcceptanceTestBase {
         response.data.tags.first().name == 'planned'
     }
 
+    def "should return 400 (Bad Request) when trying to insert task with non-existing tags"() {
+        given: "user is authenticated"
+        def sessionId = createSessionWithUser(TEST_USER_ID)
+        when: "client sends POST request to create task with non-existing tags"
+        def response = client.post(path: "tasks", body: UPDATED_JSON_TASK_WITH_INCORRECT_TAG,
+                requestContentType: ContentType.JSON, headers: ['Session-Id': sessionId])
+        then: "400 (Bad Request) is returned in response"
+        response.status == 400
+    }
+
     def "should return Forbidden (403) when unauthorized access"() {
         when: "client sends POST request to create a new task without authorization"
         def response = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON)

@@ -1,8 +1,6 @@
 package pl.aetas.gtweb.service
-
 import org.bson.types.ObjectId
 import pl.aetas.gtweb.data.*
-import pl.aetas.gtweb.domain.Tag
 import pl.aetas.gtweb.domain.Task
 import spock.lang.Specification
 
@@ -73,20 +71,6 @@ class TasksServiceTest extends Specification {
         def response = tasksService.create(securityContext, task)
         then:
         response.location == URI.create('tasks/someTaskId')
-    }
-
-    def "should throw exception when trying to create task with non-existing tags"() {
-        given:
-        def nonExistingTag = new Tag('someId', TEST_USER_ID, 'nonExisting', 'purple', false)
-        def task = new Task.TaskBuilder().setOwnerId(TEST_USER_ID).setTitle('taskTitle')
-                .setCreatedDate(new Date())
-                .addTag(nonExistingTag)
-                .build()
-        tagDao.exists(TEST_USER_ID, 'nonExisting') >> false
-        when:
-        tasksService.create(securityContext, task)
-        then:
-        thrown(WebApplicationException)
     }
 
     def "should set owner id from security context for the task when creating task"() {

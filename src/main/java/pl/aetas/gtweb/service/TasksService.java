@@ -49,16 +49,15 @@ public class TasksService {
         task.setOwnerId(sc.getUserPrincipal().getName());
         for (Tag tag : task.getTags()) {
             tag.setOwnerId(sc.getUserPrincipal().getName());
-            // TODO replace multiple calls to DB with one tags or task validation call do DAO
-            if (!tagDao.exists(tag.getOwnerId(), tag.getName())) {
-                LOGGER.warn("Client tried to create task with non-existing tags. Bad Request.");
-                throw new WebApplicationException(Response.Status.BAD_REQUEST);
-            }
         }
-        Task savedTask = taskDao.insert(task);
-
-        LOGGER.debug("New task created for customer: {} with task id: {}", task.getOwnerId(), task.getId());
-        return Response.created(URI.create("tasks/" + savedTask.getId())).entity(savedTask).build();
+        try {
+            Task savedTask = taskDao.insert(task);
+            LOGGER.debug("New task created for customer: {} with task id: {}", task.getOwnerId(), task.getId());
+            return Response.created(URI.create("tasks/" + savedTask.getId())).entity(savedTask).build();
+        } catch (UnsupportedDataOperationException e) {
+            LOGGER.warn("Unsupported data operation when trying to insert task", e);
+            throw new WebApplicationException(Response.Status.BAD_REQUEST);
+        }
     }
 
     @DELETE
@@ -82,17 +81,15 @@ public class TasksService {
         task.setId(id);
         for (Tag tag : task.getTags()) {
             tag.setOwnerId(sc.getUserPrincipal().getName());
-            // TODO replace multiple calls to DB with one tags or task validation call do DAO (definitely do task validation)
-            if (!tagDao.exists(tag.getOwnerId(), tag.getName())) {
-                LOGGER.warn("Client tried to create task with non-existing tags. Bad Request.");
-                throw new WebApplicationException(Response.Status.BAD_REQUEST);
-            }
         }
         try {
             Task taskAfterUpdate = taskDao.update(sc.getUserPrincipal().getName(), task);
             return Response.ok(taskAfterUpdate).build();
         } catch (NonExistingResourceOperationException e) {
             return Response.status(Response.Status.NOT_FOUND).build();
+        } catch (UnsupportedDataOperationException e) {
+            LOGGER.warn("Unsupported data operation when trying to update task", e);
+            throw new WebApplicationException(Response.Status.BAD_REQUEST);
         }
     }
 

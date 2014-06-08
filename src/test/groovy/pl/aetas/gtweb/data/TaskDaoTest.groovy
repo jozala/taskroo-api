@@ -328,6 +328,19 @@ class TaskDaoTest extends DaoTestBase {
         thrown(NonExistingResourceOperationException)
     }
 
+    def "should throw exception when trying to update task by adding non-existing tags"() {
+        given:
+        def nonExistingTag = Tag.TagBuilder.start('mariusz', 'nonExisting').id(ObjectId.get().toString()).build()
+        Task task = new Task.TaskBuilder().setOwnerId("mariusz").setTitle("title").build()
+        task = taskDao.insert(task)
+        Task taskWithNonExistingTag = new Task.TaskBuilder().setId(task.id).setOwnerId("mariusz").setTitle("title")
+                .addTag(nonExistingTag)build()
+        when:
+        taskDao.update('mariusz', taskWithNonExistingTag)
+        then:
+        thrown(UnsupportedDataOperationException)
+    }
+
     def "should change task's path in DB when setting task as subtask"() {
         given:
         def parentTask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle1')
