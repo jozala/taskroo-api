@@ -27,7 +27,7 @@ class TasksServiceSpec extends AcceptanceTestBase {
         def sessionId = createSessionWithUser(TEST_USER_ID)
         when: "client sends POST request to create a new task"
         def response = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON,
-                headers: ['Session-Id': sessionId])
+                headers: ['Authorization': generateAuthorizationHeader(sessionId)])
         then: "new task object is returned"
         response.status == 201
         response.data.id != null
@@ -41,7 +41,7 @@ class TasksServiceSpec extends AcceptanceTestBase {
         def sessionId = createSessionWithUser(TEST_USER_ID)
         when: "client sends POST request to create task with non-existing tags"
         def response = client.post(path: "tasks", body: UPDATED_JSON_TASK_WITH_INCORRECT_TAG,
-                requestContentType: ContentType.JSON, headers: ['Session-Id': sessionId])
+                requestContentType: ContentType.JSON, headers: ['Authorization': generateAuthorizationHeader(sessionId)])
         then: "400 (Bad Request) is returned in response"
         response.status == 400
     }
@@ -58,7 +58,7 @@ class TasksServiceSpec extends AcceptanceTestBase {
         def sessionId = createSessionWithUser(TEST_USER_ID)
         when: "client sends request to create new task"
         def response = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON,
-                headers: ['Session-Id': sessionId])
+                headers: ['Authorization': generateAuthorizationHeader(sessionId)])
         then: "new task is saved in database"
         response.status == 201
         def taskDbObject = tasksCollection.findOne(new BasicDBObject('_id', new ObjectId(response.data.id)))
@@ -91,11 +91,11 @@ class TasksServiceSpec extends AcceptanceTestBase {
         given: 'user exists in session and user has tasks'
         def sessionId = createSessionWithUser(TEST_USER_ID)
         client.post(path: 'tasks', body: '{"title": "taskTitle1"}', requestContentType: ContentType.JSON,
-                headers: ['Session-Id': sessionId])
+                headers: ['Authorization': generateAuthorizationHeader(sessionId)])
         client.post(path: 'tasks', body: '{"title": "taskTitle2"}', requestContentType: ContentType.JSON,
-                headers: ['Session-Id': sessionId])
+                headers: ['Authorization': generateAuthorizationHeader(sessionId)])
         when: 'client sends request to get all tasks'
-        def response = client.get([path: 'tasks', headers: ['Session-Id': sessionId]])
+        def response = client.get([path: 'tasks', headers: ['Authorization': generateAuthorizationHeader(sessionId)]])
         then: 'response contains list of tasks'
         response.status == 200
         response.data.collect { it.title }.contains('taskTitle1')
@@ -106,11 +106,11 @@ class TasksServiceSpec extends AcceptanceTestBase {
         given: 'user exists in session and user has tasks'
         def sessionId = createSessionWithUser(TEST_USER_ID)
         client.post(path: 'tasks', body: '{"title": "taskTitle1"}', requestContentType: ContentType.JSON,
-                headers: ['Session-Id': sessionId])
+                headers: ['Authorization': generateAuthorizationHeader(sessionId)])
         def createTaskResponse = client.post(path: 'tasks', body: '{"title": "taskTitle2"}',
-                requestContentType: ContentType.JSON, headers: ['Session-Id': sessionId])
+                requestContentType: ContentType.JSON, headers: ['Authorization': generateAuthorizationHeader(sessionId)])
         when: 'client sends request to delete task'
-        def response = client.delete([path: "tasks/${createTaskResponse.data.id}", headers: ['Session-Id': sessionId]])
+        def response = client.delete([path: "tasks/${createTaskResponse.data.id}", headers: ['Authorization': generateAuthorizationHeader(sessionId)]])
         then: 'task should not exists in DB'
         tasksCollection.count(new BasicDBObject('_id', new ObjectId(createTaskResponse.data.id))) == 0
         and: 'response code is 204'
@@ -121,7 +121,7 @@ class TasksServiceSpec extends AcceptanceTestBase {
         given: 'user exists without any tasks'
         def sessionId = createSessionWithUser(TEST_USER_ID)
         when: 'client sends request to delete non-existing task'
-        def response = client.delete([path: 'tasks/nonExistingTaskId', headers: ['Session-Id': sessionId]])
+        def response = client.delete([path: 'tasks/nonExistingTaskId', headers: ['Authorization': generateAuthorizationHeader(sessionId)]])
         then: 'response code is 404 (not found)'
         response.status == 404
     }
@@ -130,13 +130,14 @@ class TasksServiceSpec extends AcceptanceTestBase {
         given: 'user A exists in session and has tasks'
         def userASessionId = createSessionWithUser(TEST_USER_ID)
         client.post(path: 'tasks', body: '{"title": "taskTitle1"}', requestContentType: ContentType.JSON,
-                headers: ['Session-Id': userASessionId])
+                headers: ['Authorization': generateAuthorizationHeader(userASessionId)])
         def createTaskResponse = client.post(path: 'tasks', body: '{"title": "taskTitle2"}',
-                requestContentType: ContentType.JSON, headers: ['Session-Id': userASessionId])
+                requestContentType: ContentType.JSON, headers: ['Authorization': generateAuthorizationHeader(userASessionId)])
         and: 'user B exists without any tasks'
         def userBSessionId = createSessionWithUser('UserB')
         when: 'client sends request as user B to delete task of user A'
-        def response = client.delete([path: "tasks/${createTaskResponse.data.id}", headers: ['Session-Id': userBSessionId]])
+        def response = client.delete([path: "tasks/${createTaskResponse.data.id}",
+                                      headers: ['Authorization': generateAuthorizationHeader(userBSessionId)]])
         then: 'response code is 404 (not found)'
         response.status == 404
     }
@@ -146,15 +147,15 @@ class TasksServiceSpec extends AcceptanceTestBase {
         def sessionId = createSessionWithUser(TEST_USER_ID)
         and: 'user has task with subtasks'
         def topLevelTaskResponse = client.post(path: 'tasks', body: '{"title": "topLevelTask"}', requestContentType: ContentType.JSON,
-                headers: ['Session-Id': sessionId])
+                headers: ['Authorization': generateAuthorizationHeader(sessionId)])
         def subtaskResponse = client.post(path: 'tasks', body: '{"title": "subTask"}',
-                requestContentType: ContentType.JSON, headers: ['Session-Id': sessionId])
+                requestContentType: ContentType.JSON, headers: ['Authorization': generateAuthorizationHeader(sessionId)])
         def subSubtaskResponse = client.post(path: 'tasks', body: '{"title": "subSubTask"}',
-                requestContentType: ContentType.JSON, headers: ['Session-Id': sessionId])
-        client.post(path: "tasks/${topLevelTaskResponse.data.id}/subtasks/${subtaskResponse.data.id}", headers: ['Session-Id': sessionId])
-        client.post(path: "tasks/${subtaskResponse.data.id}/subtasks/${subSubtaskResponse.data.id}", headers: ['Session-Id': sessionId])
+                requestContentType: ContentType.JSON, headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        client.post(path: "tasks/${topLevelTaskResponse.data.id}/subtasks/${subtaskResponse.data.id}", headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        client.post(path: "tasks/${subtaskResponse.data.id}/subtasks/${subSubtaskResponse.data.id}", headers: ['Authorization': generateAuthorizationHeader(sessionId)])
         when: 'client sends request to delete top-level task'
-        client.delete([path: "tasks/${topLevelTaskResponse.data.id}", headers: ['Session-Id': sessionId]])
+        client.delete([path: "tasks/${topLevelTaskResponse.data.id}", headers: ['Authorization': generateAuthorizationHeader(sessionId)]])
         then: 'subtask should not exists in DB'
         tasksCollection.count(new BasicDBObject('_id', new ObjectId(subtaskResponse.data.id))) == 0
         and: 'subSubtask should not exists in DB'
@@ -166,10 +167,10 @@ class TasksServiceSpec extends AcceptanceTestBase {
         def sessionId = createSessionWithUser(TEST_USER_ID)
         and: "user has created a task"
         def taskCreatedResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON,
-                headers: ['Session-Id': sessionId])
+                headers: ['Authorization': generateAuthorizationHeader(sessionId)])
         when: "client sends PUT request to update existing task"
         def response = client.put(path: "tasks/${taskCreatedResponse.data.id}", body: UPDATED_JSON_TASK,
-                requestContentType: ContentType.JSON, headers: ['Session-Id': sessionId])
+                requestContentType: ContentType.JSON, headers: ['Authorization': generateAuthorizationHeader(sessionId)])
         then: "200 (OK) is returned in response"
         response.status == 200
         and: "all task field should be updated in response"
@@ -216,7 +217,7 @@ class TasksServiceSpec extends AcceptanceTestBase {
         def sessionId = createSessionWithUser(TEST_USER_ID)
         when: 'client sends request to update non-existing task'
         def response = client.put(path: "tasks/${ObjectId.get()}", body: UPDATED_JSON_TASK,
-                requestContentType: ContentType.JSON, headers: ['Session-Id': sessionId])
+                requestContentType: ContentType.JSON, headers: ['Authorization': generateAuthorizationHeader(sessionId)])
         then: 'response code is 404 (not found)'
         response.status == 404
     }
@@ -225,12 +226,12 @@ class TasksServiceSpec extends AcceptanceTestBase {
         given: 'user A exists in session and has tasks'
         def userASessionId = createSessionWithUser(TEST_USER_ID)
         def createTaskResponse = client.post(path: 'tasks', body: '{"title": "taskTitle2"}',
-                requestContentType: ContentType.JSON, headers: ['Session-Id': userASessionId])
+                requestContentType: ContentType.JSON, headers: ['Authorization': generateAuthorizationHeader(userASessionId)])
         and: 'user B exists without any tasks'
         def userBSessionId = createSessionWithUser('UserB')
         when: 'client sends request as user B to update task of user A'
         def response = client.put([path: "tasks/${createTaskResponse.data.id}", body: '{"title": "taskTitle3"}',
-                                   requestContentType: ContentType.JSON, headers: ['Session-Id': userBSessionId]])
+                                   requestContentType: ContentType.JSON, headers: ['Authorization': generateAuthorizationHeader(userBSessionId)]])
         then: 'response code is 404 (not found)'
         response.status == 404
     }
@@ -240,10 +241,10 @@ class TasksServiceSpec extends AcceptanceTestBase {
         def sessionId = createSessionWithUser(TEST_USER_ID)
         and: "user has created a task"
         def taskCreatedResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON,
-                headers: ['Session-Id': sessionId])
+                headers: ['Authorization': generateAuthorizationHeader(sessionId)])
         when: "client sends PUT request to update existing task with non-existing tags"
         def response = client.put(path: "tasks/${taskCreatedResponse.data.id}", body: UPDATED_JSON_TASK_WITH_INCORRECT_TAG,
-                requestContentType: ContentType.JSON, headers: ['Session-Id': sessionId])
+                requestContentType: ContentType.JSON, headers: ['Authorization': generateAuthorizationHeader(sessionId)])
         then: "400 (Bad Request) is returned in response"
         response.status == 400
     }
@@ -271,11 +272,11 @@ class TasksServiceSpec extends AcceptanceTestBase {
         def sessionId = createSessionWithUser(TEST_USER_ID)
         and: "user has two, top-level tasks"
         def taskBResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON,
-                headers: ['Session-Id': sessionId])
+                headers: ['Authorization': generateAuthorizationHeader(sessionId)])
         def taskAResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON,
-                headers: ['Session-Id': sessionId])
+                headers: ['Authorization': generateAuthorizationHeader(sessionId)])
         when: "client sends POST request to add existing task A as subtask to other existing task B"
-        def response = client.post(path: "tasks/${taskBResponse.data.id}/subtasks/${taskAResponse.data.id}", headers: ['Session-Id': sessionId])
+        def response = client.post(path: "tasks/${taskBResponse.data.id}/subtasks/${taskAResponse.data.id}", headers: ['Authorization': generateAuthorizationHeader(sessionId)])
         then: "task A is saved as task's B subtask in the database"
         def taskAAfterUpdate = tasksCollection.findOne(new BasicDBObject([_id: new ObjectId(taskAResponse.data.id.toString())]))
         taskAAfterUpdate.path == [taskBResponse.data.id]
@@ -290,14 +291,14 @@ class TasksServiceSpec extends AcceptanceTestBase {
         def sessionId = createSessionWithUser(TEST_USER_ID)
         and: "user has three tasks, task A with subtask B and top-level task C"
         def taskAResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON,
-                headers: ['Session-Id': sessionId])
+                headers: ['Authorization': generateAuthorizationHeader(sessionId)])
         def taskBResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON,
-                headers: ['Session-Id': sessionId])
+                headers: ['Authorization': generateAuthorizationHeader(sessionId)])
         def taskCResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON,
-                headers: ['Session-Id': sessionId])
-        client.post(path: "tasks/${taskAResponse.data.id}/subtasks/${taskBResponse.data.id}", headers: ['Session-Id': sessionId])
+                headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        client.post(path: "tasks/${taskAResponse.data.id}/subtasks/${taskBResponse.data.id}", headers: ['Authorization': generateAuthorizationHeader(sessionId)])
         when: "client sends POST request to add task C as subtask to task B"
-        def response = client.post(path: "tasks/${taskBResponse.data.id}/subtasks/${taskCResponse.data.id}", headers: ['Session-Id': sessionId])
+        def response = client.post(path: "tasks/${taskBResponse.data.id}/subtasks/${taskCResponse.data.id}", headers: ['Authorization': generateAuthorizationHeader(sessionId)])
         then: "task C is saved as task's B subtask in the database"
         def taskCAfterUpdate = tasksCollection.findOne(new BasicDBObject([_id: new ObjectId(taskCResponse.data.id.toString())]))
         taskCAfterUpdate.path == [taskAResponse.data.id, taskBResponse.data.id]
@@ -310,9 +311,9 @@ class TasksServiceSpec extends AcceptanceTestBase {
         def sessionId = createSessionWithUser(TEST_USER_ID)
         and: "user has existing task"
         def taskResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON,
-                headers: ['Session-Id': sessionId])
+                headers: ['Authorization': generateAuthorizationHeader(sessionId)])
         when: "client sends POST request to add task as subtask to itself"
-        def response = client.post(path: "tasks/${taskResponse.data.id}/subtasks/${taskResponse.data.id}", headers: ['Session-Id': sessionId])
+        def response = client.post(path: "tasks/${taskResponse.data.id}/subtasks/${taskResponse.data.id}", headers: ['Authorization': generateAuthorizationHeader(sessionId)])
         then: "400 BAD REQUEST is returned in response"
         response.status == 400
     }
@@ -321,11 +322,11 @@ class TasksServiceSpec extends AcceptanceTestBase {
         given: "user is authenticated"
         def sessionId = createSessionWithUser(TEST_USER_ID)
         and: "user has existing task A with subtask B"
-        def taskAResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON, headers: ['Session-Id': sessionId])
-        def taskBResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON, headers: ['Session-Id': sessionId])
-        client.post(path: "tasks/${taskAResponse.data.id}/subtasks/${taskBResponse.data.id}", headers: ['Session-Id': sessionId])
+        def taskAResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON, headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        def taskBResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON, headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        client.post(path: "tasks/${taskAResponse.data.id}/subtasks/${taskBResponse.data.id}", headers: ['Authorization': generateAuthorizationHeader(sessionId)])
         when: "client sends POST request to add task A as subtask to task B"
-        def response = client.post(path: "tasks/${taskBResponse.data.id}/subtasks/${taskAResponse.data.id}", headers: ['Session-Id': sessionId])
+        def response = client.post(path: "tasks/${taskBResponse.data.id}/subtasks/${taskAResponse.data.id}", headers: ['Authorization': generateAuthorizationHeader(sessionId)])
         then: "400 BAD REQUEST is returned in response"
         response.status == 400
     }
@@ -334,17 +335,17 @@ class TasksServiceSpec extends AcceptanceTestBase {
         given: "user is authenticated"
         def sessionId = createSessionWithUser(TEST_USER_ID)
         and: "user has three tasks, task A with subtask B and top-level task C"
-        def taskAResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON, headers: ['Session-Id': sessionId])
-        def taskBResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON, headers: ['Session-Id': sessionId])
-        def taskCResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON, headers: ['Session-Id': sessionId])
-        client.post(path: "tasks/${taskAResponse.data.id}/subtasks/${taskBResponse.data.id}", headers: ['Session-Id': sessionId])
+        def taskAResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON, headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        def taskBResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON, headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        def taskCResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON, headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        client.post(path: "tasks/${taskAResponse.data.id}/subtasks/${taskBResponse.data.id}", headers: ['Authorization': generateAuthorizationHeader(sessionId)])
         when: "client sends POST request to add task B as subtask to task C"
-        client.post(path: "tasks/${taskCResponse.data.id}/subtasks/${taskBResponse.data.id}", headers: ['Session-Id': sessionId])
+        client.post(path: "tasks/${taskCResponse.data.id}/subtasks/${taskBResponse.data.id}", headers: ['Authorization': generateAuthorizationHeader(sessionId)])
         then: "task B is saved as task's C subtask in the database"
         def taskBAfterUpdate = tasksCollection.findOne(new BasicDBObject([_id: new ObjectId(taskBResponse.data.id.toString())]))
         taskBAfterUpdate.path == [taskCResponse.data.id]
         and: "task A should not have any subtasks"
-        def response = client.get([path: 'tasks', headers: ['Session-Id': sessionId]])
+        def response = client.get([path: 'tasks', headers: ['Authorization': generateAuthorizationHeader(sessionId)]])
         response.data.find { it.id == taskAResponse.data.id }.subtasks.isEmpty()
     }
 
@@ -352,9 +353,9 @@ class TasksServiceSpec extends AcceptanceTestBase {
         given: "user is authenticated"
         def sessionId = createSessionWithUser(TEST_USER_ID)
         and: "user task"
-        def taskResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON, headers: ['Session-Id': sessionId])
+        def taskResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON, headers: ['Authorization': generateAuthorizationHeader(sessionId)])
         when: "client sends POST request to add task as subtask to non-existing task"
-        def response = client.post(path: "tasks/${ObjectId.get().toString()}/subtasks/${taskResponse.data.id}", headers: ['Session-Id': sessionId])
+        def response = client.post(path: "tasks/${ObjectId.get().toString()}/subtasks/${taskResponse.data.id}", headers: ['Authorization': generateAuthorizationHeader(sessionId)])
         then: "404 NOT FOUND is returned in response"
         response.status == 404
     }
@@ -363,13 +364,14 @@ class TasksServiceSpec extends AcceptanceTestBase {
         given: 'user A exists with task A'
         def userASessionId = createSessionWithUser(TEST_USER_ID)
         def taskAResponse = client.post(path: 'tasks', body: '{"title": "taskTitleA"}',
-                requestContentType: ContentType.JSON, headers: ['Session-Id': userASessionId])
+                requestContentType: ContentType.JSON, headers: ['Authorization': generateAuthorizationHeader(userASessionId)])
         and: 'user B exists with task B'
         def userBSessionId = createSessionWithUser('UserB')
         def taskBResponse = client.post(path: 'tasks', body: '{"title": "taskTitleB"}',
-                requestContentType: ContentType.JSON, headers: ['Session-Id': userBSessionId])
+                requestContentType: ContentType.JSON, headers: ['Authorization': generateAuthorizationHeader(userBSessionId)])
         when: "client as user B sends POST request to add task B as subtask to task A of user A"
-        def response = client.post(path: "tasks/${taskAResponse.data.id}/subtasks/${taskBResponse.data.id}", headers: ['Session-Id': userBSessionId])
+        def response = client.post(path: "tasks/${taskAResponse.data.id}/subtasks/${taskBResponse.data.id}",
+                headers: ['Authorization': generateAuthorizationHeader(userBSessionId)])
         then: "404 NOT FOUND is returned in response"
         response.status == 404
     }
@@ -378,17 +380,17 @@ class TasksServiceSpec extends AcceptanceTestBase {
         given: "user is authenticated"
         def sessionId = createSessionWithUser(TEST_USER_ID)
         and: "user has three tasks, task A with subtask B with subtask C"
-        def taskAResponse = client.post(path: 'tasks', body: '{"title": "taskTitleA"}', requestContentType: ContentType.JSON, headers: ['Session-Id': sessionId])
-        def taskBResponse = client.post(path: 'tasks', body: '{"title": "taskTitleB"}', requestContentType: ContentType.JSON, headers: ['Session-Id': sessionId])
-        def taskCResponse = client.post(path: 'tasks', body: '{"title": "taskTitleC"}', requestContentType: ContentType.JSON, headers: ['Session-Id': sessionId])
-        client.post(path: "tasks/${taskAResponse.data.id}/subtasks/${taskBResponse.data.id}", headers: ['Session-Id': sessionId])
-        client.post(path: "tasks/${taskBResponse.data.id}/subtasks/${taskCResponse.data.id}", headers: ['Session-Id': sessionId])
+        def taskAResponse = client.post(path: 'tasks', body: '{"title": "taskTitleA"}', requestContentType: ContentType.JSON, headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        def taskBResponse = client.post(path: 'tasks', body: '{"title": "taskTitleB"}', requestContentType: ContentType.JSON, headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        def taskCResponse = client.post(path: 'tasks', body: '{"title": "taskTitleC"}', requestContentType: ContentType.JSON, headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        client.post(path: "tasks/${taskAResponse.data.id}/subtasks/${taskBResponse.data.id}", headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        client.post(path: "tasks/${taskBResponse.data.id}/subtasks/${taskCResponse.data.id}", headers: ['Authorization': generateAuthorizationHeader(sessionId)])
         and: "user has top-level task E"
-        def taskEResponse = client.post(path: 'tasks', body: '{"title": "taskTitleE"}', requestContentType: ContentType.JSON, headers: ['Session-Id': sessionId])
+        def taskEResponse = client.post(path: 'tasks', body: '{"title": "taskTitleE"}', requestContentType: ContentType.JSON, headers: ['Authorization': generateAuthorizationHeader(sessionId)])
         when: "client sends POST request to add task A as subtask of task E"
-        client.post(path: "tasks/${taskEResponse.data.id}/subtasks/${taskAResponse.data.id}", headers: ['Session-Id': sessionId])
+        client.post(path: "tasks/${taskEResponse.data.id}/subtasks/${taskAResponse.data.id}", headers: ['Authorization': generateAuthorizationHeader(sessionId)])
         then: "tasks A,B and C should be returned as task's E descendants"
-        def response = client.get([path: 'tasks', headers: ['Session-Id': sessionId]])
+        def response = client.get([path: 'tasks', headers: ['Authorization': generateAuthorizationHeader(sessionId)]])
         response.data.first().subtasks.first().id == taskAResponse.data.id
         response.data.first().subtasks.first().subtasks.first().id == taskBResponse.data.id
         response.data.first().subtasks.first().subtasks.first().subtasks.first().id == taskCResponse.data.id

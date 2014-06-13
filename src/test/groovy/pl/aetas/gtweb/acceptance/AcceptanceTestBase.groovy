@@ -37,6 +37,11 @@ abstract class AcceptanceTestBase extends Specification {
         return sessionId
     }
 
+    protected String generateAuthorizationHeader(String tokenKey) {
+        def randomString = UUID.randomUUID().toString()
+        return "GTWebAuth realm=\"gtweb@aetas.pl\", tokenKey=\"$tokenKey\", cnonce=\"$randomString\""
+    }
+
 
 
 

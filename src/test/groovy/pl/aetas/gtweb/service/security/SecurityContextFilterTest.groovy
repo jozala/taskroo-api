@@ -18,7 +18,7 @@ class SecurityContextFilterTest extends Specification {
 
     }
 
-    def "should set security context without session when session id is not set"() {
+    def "should set security context without session when authorization header is not available"() {
         given:
         ContainerRequestContext containerRequestContext = Mock(ContainerRequestContext)
         when:
@@ -27,12 +27,22 @@ class SecurityContextFilterTest extends Specification {
         1 * containerRequestContext.setSecurityContext({ it.session == null && it.userPrincipal == null })
     }
 
-    def "should set security context with session set when session id contains correct value"() {
+    def "should set security context without session when authorization header does not contain tokenKey"() {
         given:
         ContainerRequestContext containerRequestContext = Mock(ContainerRequestContext)
-        containerRequestContext.getHeaderString('Session-Id') >> 'someSessionId'
-        def session = new Session(userId: 'userId', sessionId: 'someSessionId')
-        sessionDao.findOne('someSessionId') >> session
+        containerRequestContext.getHeaderString('Authorization') >> 'GTWebAuth realm="gtweb@aetas.pl",cnonce="uniqueValue"'
+        when:
+        securityContextFilter.filter(containerRequestContext)
+        then:
+        1 * containerRequestContext.setSecurityContext({ it.session == null && it.userPrincipal == null })
+    }
+
+    def "should set security context with session set when authorization header contains correct tokenKey"() {
+        given:
+        ContainerRequestContext containerRequestContext = Mock(ContainerRequestContext)
+        containerRequestContext.getHeaderString('Authorization') >> 'GTWebAuth realm="gtweb@aetas.pl",cnonce="uniqueValue",tokenKey="someTokenKey"'
+        def session = new Session(userId: 'userId', sessionId: 'someTokenKey')
+        sessionDao.findOne('someTokenKey') >> session
         when:
         securityContextFilter.filter(containerRequestContext)
         then:

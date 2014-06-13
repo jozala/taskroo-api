@@ -11,7 +11,9 @@ import javax.ws.rs.container.ContainerRequestContext;
 import javax.ws.rs.container.ContainerRequestFilter;
 import javax.ws.rs.ext.Provider;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 @Priority(Priorities.AUTHORIZATION)
@@ -27,14 +29,22 @@ public class SecurityContextFilter implements ContainerRequestFilter {
 
     @Override
     public void filter(ContainerRequestContext requestContext) throws IOException {
-        // TODO this should use authorization header instead of session-id header
-        final String sessionId = requestContext.getHeaderString("Session-Id");
+        // Authorization: GTWebAuth realm="gtweb@aetas.pl",tokenKey="=SessionIDString=",cnonce="uniqueValue"
+
+        String authorizationHeader = requestContext.getHeaderString("Authorization");
+        if (authorizationHeader == null) {
+            requestContext.setSecurityContext(new GtWebSecurityContext(null, null));
+            return;
+        }
+
+        Map<String, String> authHeaderMap = parseAuthorizationHeader(authorizationHeader);
+        String tokenKey = authHeaderMap.get("tokenKey");
 
         User user = null;
         Session session = null;
 
-        if (sessionId != null && sessionId.length() > 0) {
-            session = sessionDao.findOne(sessionId);
+        if (tokenKey != null && !tokenKey.isEmpty()) {
+            session = sessionDao.findOne(tokenKey);
 
             if (null != session) {
                 // TODO temporary solution to set roles. Roles should be saved in the session (whole User object should be saved there).
@@ -45,5 +55,19 @@ public class SecurityContextFilter implements ContainerRequestFilter {
         }
 
         requestContext.setSecurityContext(new GtWebSecurityContext(session, user));
+    }
+
+    private Map<String, String> parseAuthorizationHeader(String authorizationHeader) {
+        Map<String, String> authHeaderMap = new HashMap<>();
+
+        authorizationHeader = authorizationHeader.replace("GTWebAuth ", "");
+        String[] authorizationHeaderElements = authorizationHeader.split(",");
+        for (String authorizationHeaderElement : authorizationHeaderElements) {
+            int equalIndex = authorizationHeaderElement.indexOf('=');
+            String authHeaderElementKey = authorizationHeaderElement.substring(0, equalIndex).trim();
+            String authHeaderElementValue = authorizationHeaderElement.substring(equalIndex+1).replaceAll("\"", "").trim();
+            authHeaderMap.put(authHeaderElementKey, authHeaderElementValue);
+        }
+        return authHeaderMap;
     }
 }
