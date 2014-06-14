@@ -2,6 +2,7 @@ package pl.aetas.gtweb.acceptance
 import com.mongodb.BasicDBObject
 import com.mongodb.QueryBuilder
 import groovyx.net.http.ContentType
+import groovyx.net.http.HttpResponseDecorator
 import org.bson.types.ObjectId
 import pl.aetas.testing.RunJetty
 
@@ -51,6 +52,13 @@ class TasksServiceSpec extends AcceptanceTestBase {
         def response = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON)
         then: "response Forbidden (403) should be returned"
         response.status == 403
+    }
+
+    def "should return Forbidden (403) with WWW-authentication domain from properties when unauthorized access"() {
+        when: "client sends POST request to create a new task without authorization"
+        HttpResponseDecorator response = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON)
+        then: "response Forbidden (403) should be returned"
+        response.getFirstHeader("WWW-Authenticate").value.contains("domain=\"")
     }
 
     def "should create task in DB with ownerId set"() {

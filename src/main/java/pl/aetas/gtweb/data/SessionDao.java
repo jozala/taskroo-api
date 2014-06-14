@@ -1,13 +1,14 @@
 package pl.aetas.gtweb.data;
 
-import com.mongodb.DBCollection;
-import com.mongodb.DBObject;
-import com.mongodb.QueryBuilder;
+import com.mongodb.*;
 import org.springframework.stereotype.Repository;
+import pl.aetas.gtweb.domain.Role;
 import pl.aetas.gtweb.service.security.Session;
 
 import javax.inject.Inject;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 
 @Repository
 public class SessionDao {
@@ -31,13 +32,11 @@ public class SessionDao {
         String userId = sessionDbObject.get("user_id").toString();
         Date createTime = (Date) sessionDbObject.get("create_time");
         Date lastAccessedTime = (Date) sessionDbObject.get("last_accessed_time");
+        Set<Role> roles = new HashSet<>(2);
+        for (Object roleInInteger : (BasicDBList) sessionDbObject.get("roles")) {
+            roles.add(Role.getByInt((Integer)roleInInteger));
+        }
 
-        Session session = new Session();
-        session.setSessionId(sessionDbObject.get("_id").toString());
-        session.setUserId(userId);
-        session.setCreateTime(createTime);
-        session.setLastAccessedTime(lastAccessedTime);
-
-        return session;
+        return new Session(sessionDbObject.get("_id").toString(), userId, roles, createTime, lastAccessedTime);
     }
 }

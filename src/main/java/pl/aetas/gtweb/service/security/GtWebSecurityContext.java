@@ -12,10 +12,12 @@ public class GtWebSecurityContext implements SecurityContext {
 
     private final Session session;
     private final User user;
+    private final String authenticationServiceUrl;
 
-    public GtWebSecurityContext(Session session, User user) {
+    public GtWebSecurityContext(Session session, User user, String authenticationServiceUrl) {
         this.session = session;
         this.user = user;
+        this.authenticationServiceUrl = authenticationServiceUrl;
     }
 
     @Override
@@ -26,8 +28,9 @@ public class GtWebSecurityContext implements SecurityContext {
     @Override
     public boolean isUserInRole(String role) {
         if (null == session) {
-            // TODO find more about returning WWW-Authenticate: Basic realm="insert realm"
-            Response denied = Response.status(Response.Status.FORBIDDEN).build();
+            Response denied = Response.status(Response.Status.FORBIDDEN)
+                    .header("WWW-Authenticate", "GTWebAuth realm=\"gtweb@aetas.pl\",domain=\"" + authenticationServiceUrl + "\"")
+                    .build();
             throw new WebApplicationException(denied);
         }
         return user.getRoles().contains(Role.valueOf(role.toUpperCase()));
@@ -40,6 +43,6 @@ public class GtWebSecurityContext implements SecurityContext {
 
     @Override
     public String getAuthenticationScheme() {
-        return SecurityContext.BASIC_AUTH;
+        return "GTWebAuth";
     }
 }

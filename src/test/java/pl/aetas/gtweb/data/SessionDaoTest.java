@@ -8,6 +8,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
+import pl.aetas.gtweb.domain.Role;
 import pl.aetas.gtweb.service.security.Session;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -28,10 +29,14 @@ public class SessionDaoTest {
     public void setUp() throws Exception {
         sessionDao = new SessionDao(sessionCollection);
 
+        BasicDBList rolesInInt = new BasicDBList();
+        rolesInInt.add(0);
+        rolesInInt.add(1);
         DBObject sessionDbObject = BasicDBObjectBuilder.start("_id", new ObjectId(TEST_SESSION_ID))
                 .add("user_id", "someUsername")
                 .add("create_time", DateTime.parse("2014-03-05T21:04:12").toDate())
                 .add("last_accessed_time", DateTime.parse("2014-03-05T21:35:06").toDate())
+                .add("roles", rolesInInt)
                 .get();
 
         when(sessionCollection.findOne(QueryBuilder.start("_id").is(new ObjectId(TEST_SESSION_ID)).get()))
@@ -57,6 +62,12 @@ public class SessionDaoTest {
         assertThat(session.getUserId()).isEqualTo("someUsername");
         assertThat(session.getCreateTime()).isEqualTo(DateTime.parse("2014-03-05T21:04:12").toDate());
         assertThat(session.getLastAccessedTime()).isEqualTo(DateTime.parse("2014-03-05T21:35:06").toDate());
+    }
+
+    @Test
+    public void shouldRetrieveUserRolesFromDbToSessionObject() throws Exception {
+        Session session = sessionDao.findOne(TEST_SESSION_ID);
+        assertThat(session.getRoles()).containsOnly(Role.ADMIN, Role.USER);
     }
 
     @Test

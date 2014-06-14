@@ -12,4 +12,13 @@ public enum Role {
     public int intValue() {
         return intValue;
     }
+
+    public static Role getByInt(int value) {
+        for (Role role : Role.values()) {
+            if (role.intValue() == value) {
+                return role;
+            }
+        }
+        throw new IllegalArgumentException("Value: " + value + " does not map to any user role value");
+    }
 }

@@ -6,6 +6,7 @@ import pl.aetas.gtweb.domain.User;
 
 import javax.annotation.Priority;
 import javax.inject.Inject;
+import javax.inject.Named;
 import javax.ws.rs.Priorities;
 import javax.ws.rs.container.ContainerRequestContext;
 import javax.ws.rs.container.ContainerRequestFilter;
@@ -21,10 +22,12 @@ import java.util.Set;
 public class SecurityContextFilter implements ContainerRequestFilter {
 
     private final SessionDao sessionDao;
+    private String authenticationServiceUrl;
 
     @Inject
-    public SecurityContextFilter(SessionDao sessionDao) {
+    public SecurityContextFilter(SessionDao sessionDao, @Named("authenticationServiceUrl") String authenticationServiceUrl) {
         this.sessionDao = sessionDao;
+        this.authenticationServiceUrl = authenticationServiceUrl;
     }
 
     @Override
@@ -33,7 +36,7 @@ public class SecurityContextFilter implements ContainerRequestFilter {
 
         String authorizationHeader = requestContext.getHeaderString("Authorization");
         if (authorizationHeader == null) {
-            requestContext.setSecurityContext(new GtWebSecurityContext(null, null));
+            requestContext.setSecurityContext(new GtWebSecurityContext(null, null, authenticationServiceUrl));
             return;
         }
 
@@ -47,14 +50,13 @@ public class SecurityContextFilter implements ContainerRequestFilter {
             session = sessionDao.findOne(tokenKey);
 
             if (null != session) {
-                // TODO temporary solution to set roles. Roles should be saved in the session (whole User object should be saved there).
                 Set<Role> roles = new HashSet<>();
                 roles.add(Role.USER);
                 user = new User(session.getUserId(), roles);
             }
         }
 
-        requestContext.setSecurityContext(new GtWebSecurityContext(session, user));
+        requestContext.setSecurityContext(new GtWebSecurityContext(session, user, authenticationServiceUrl));
     }
 
     private Map<String, String> parseAuthorizationHeader(String authorizationHeader) {

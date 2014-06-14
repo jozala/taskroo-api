@@ -33,7 +33,7 @@ abstract class AcceptanceTestBase extends Specification {
     protected String createSessionWithUser(String userId) {
         def sessionId = UUID.randomUUID().toString()
         sessionCollection.insert(new BasicDBObject(
-                [_id: sessionId, user_id: userId, create_time: new Date(), last_accessed_time: new Date()]))
+                [_id: sessionId, user_id: userId, roles: [1], create_time: new Date(), last_accessed_time: new Date()]))
         return sessionId
     }
 
