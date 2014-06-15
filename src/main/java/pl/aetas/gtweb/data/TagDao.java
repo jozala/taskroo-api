@@ -40,10 +40,10 @@ public class TagDao {
         return dbTagConverter.convertDbObjectsToSetOfTags(dbTags.toArray());
     }
 
-    public boolean exists(String ownerId, String name) {
-        Objects.requireNonNull(ownerId);
-        Objects.requireNonNull(name);
-        DBObject query = new BasicDBObject(NAME_KEY, name).append(OWNER_ID_KEY, ownerId);
+    private boolean exists(String ownerId, String tagId) {
+        assert ownerId != null;
+        assert tagId != null;
+        DBObject query = new BasicDBObject(ID_KEY, new ObjectId(tagId)).append(OWNER_ID_KEY, ownerId);
         long count = tagsCollection.count(query);
         return count > 0;
     }
@@ -62,7 +62,7 @@ public class TagDao {
         return dbTagConverter.convertDbObjectToTag(dbTag);
     }
 
-    public Tag findOne(String ownerId, String name) {
+    public Tag findByName(String ownerId, String name) {
         Objects.requireNonNull(ownerId);
         Objects.requireNonNull(name);
         DBObject tag = tagsCollection.findOne(new BasicDBObject("owner_id", ownerId).append("name", name));
@@ -72,18 +72,17 @@ public class TagDao {
         return dbTagConverter.convertDbObjectToTag(tag);
     }
 
-    public void remove(String ownerId, String name) throws NonExistingResourceOperationException{
+    public void remove(String ownerId, String tagId) throws NonExistingResourceOperationException{
         Objects.requireNonNull(ownerId);
-        Objects.requireNonNull(name);
+        Objects.requireNonNull(tagId);
 
-        if (!exists(ownerId, name)) {
-            LOGGER.error("Trying to remove non-existing tag with name {} of owner {}", name, ownerId);
+        if (!exists(ownerId, tagId)) {
+            LOGGER.error("Trying to remove non-existing tag with id {} of owner {}", tagId, ownerId);
             throw new NonExistingResourceOperationException("Trying to remove non-existing tag");
         }
 
-        BasicDBObject queryTagByOwnerAndName = new BasicDBObject(TagDao.OWNER_ID_KEY, ownerId).append(TagDao.NAME_KEY, name);
-        String tagId = tagsCollection.findOne(queryTagByOwnerAndName, new BasicDBObject("_id", true)).get("_id").toString();
-        tagsCollection.remove(new BasicDBObject("_id", new ObjectId(tagId)));
+        BasicDBObject queryTagByOwnerAndId = new BasicDBObject(TagDao.OWNER_ID_KEY, ownerId).append(TagDao.ID_KEY, new ObjectId(tagId));
+        tagsCollection.remove(queryTagByOwnerAndId);
         removeTagFromAllTasksOfThisUser(ownerId, tagId);
     }
 
@@ -92,9 +91,9 @@ public class TagDao {
         tasksCollection.update(queryTasksByOwnerWithTag, new BasicDBObject("$pull", new BasicDBObject(TaskDao.TAGS_KEY, tagId)), false, true);
     }
 
-    public Tag update(String ownerId, String currentTagName, Tag tagToUpdate) throws NonExistingResourceOperationException{
+    public Tag update(String ownerId, String tagId, Tag tagToUpdate) throws NonExistingResourceOperationException{
         Objects.requireNonNull(ownerId);
-        Objects.requireNonNull(currentTagName);
+        Objects.requireNonNull(tagId);
         Objects.requireNonNull(tagToUpdate);
 
         if (!ownerId.equals(tagToUpdate.getOwnerId())) {
@@ -102,14 +101,14 @@ public class TagDao {
             throw new IllegalArgumentException("OwnerId given is different than ownerId in the tag object");
         }
 
-        BasicDBObject queryTagByOwnerAndName = new BasicDBObject(TagDao.OWNER_ID_KEY, ownerId).append(TagDao.NAME_KEY, currentTagName);
+        BasicDBObject queryTagByOwnerAndId = new BasicDBObject(TagDao.OWNER_ID_KEY, ownerId).append(TagDao.ID_KEY, new ObjectId(tagId));
         DBObject dbTagToUpdate = BasicDBObjectBuilder.start(OWNER_ID_KEY, ownerId)
                 .add(NAME_KEY, tagToUpdate.getName())
                 .add(COLOR_KEY, tagToUpdate.getColor())
                 .add(VISIBLE_IN_WORK_VIEW_KEY, tagToUpdate.isVisibleInWorkView()).get();
-        DBObject dbTagAfterUpdate = tagsCollection.findAndModify(queryTagByOwnerAndName, null, null, false, dbTagToUpdate, true, false);
+        DBObject dbTagAfterUpdate = tagsCollection.findAndModify(queryTagByOwnerAndId, null, null, false, dbTagToUpdate, true, false);
         if (dbTagAfterUpdate == null) {
-            throw new NonExistingResourceOperationException("Tag: " + currentTagName + " for user: " + ownerId +
+            throw new NonExistingResourceOperationException("Tag: " + tagId + " for user: " + ownerId +
                     " cannot be updated, because it has not been found");
         }
         return dbTagConverter.convertDbObjectToTag(dbTagAfterUpdate);

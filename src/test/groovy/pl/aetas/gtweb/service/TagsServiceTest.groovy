@@ -70,7 +70,7 @@ class TagsServiceTest extends Specification {
         given:
         principal.getName() >> 'ownerId'
         def tag = new Tag(null, null, 'someTagName', 'orange', true)
-        tagDao.findOne('ownerId','someTagName') >> new Tag('79821374893', 'ownerId', 'someTagName', 'orange', true)
+        tagDao.findByName('ownerId','someTagName') >> new Tag('79821374893', 'ownerId', 'someTagName', 'orange', true)
         tagDao.insert(tag) >> new Tag('id', 'ownerId', 'someTagName', 'orange', true)
         when:
         def response = tagsService.create(securityContext, tag)
@@ -81,11 +81,10 @@ class TagsServiceTest extends Specification {
     def "should remove tag from DB when deleting tag"() {
         given:
         principal.getName() >> 'ownerId'
-        tagDao.findOne('ownerId', 'someTagName') >> Mock(Tag)
         when:
-        tagsService.delete(securityContext, 'someTagName')
+        tagsService.delete(securityContext, 'someTagId')
         then:
-        1 * tagDao.remove('ownerId', 'someTagName')
+        1 * tagDao.remove('ownerId', 'someTagId')
     }
 
     def "should return 404 when trying to delete tag which does not exist"() {
@@ -93,7 +92,7 @@ class TagsServiceTest extends Specification {
         principal.getName() >> 'ownerId'
         tagDao.remove(_, _) >> { throw new NonExistingResourceOperationException('') }
         when:
-        def response = tagsService.delete(securityContext, 'someTagName')
+        def response = tagsService.delete(securityContext, 'someTagId')
         then:
         response.status == 404
     }
@@ -101,9 +100,9 @@ class TagsServiceTest extends Specification {
     def "should return 204 when tag has been deleted correctly"() {
         given:
         principal.getName() >> 'ownerId'
-        tagDao.findOne('ownerId', 'someTagName') >> Mock(Tag)
+        tagDao.findByName('ownerId', 'someTagId') >> Mock(Tag)
         when:
-        def response = tagsService.delete(securityContext, 'someTagName')
+        def response = tagsService.delete(securityContext, 'someTagId')
         then:
         response.status == 204
     }
@@ -111,20 +110,20 @@ class TagsServiceTest extends Specification {
     def "should update tag in DB when tag exists for customer"() {
         given:
         principal.getName() >> 'ownerId'
-        def tag = new Tag(null, null, 'newTagName', 'orange', true)
+        def tag = new Tag('tagId1', null, 'newTagName', 'orange', true)
         when:
-        tagsService.update(securityContext, 'tag', tag)
+        tagsService.update(securityContext, 'tagId1', tag)
         then:
-        1 * tagDao.update('ownerId', 'tag', tag)
+        1 * tagDao.update('ownerId', 'tagId1', tag)
     }
 
     def "should return 200 when tag has been correctly updated"() {
         given:
         principal.getName() >> 'ownerId'
         def tag = new Tag(null, null, 'newTagName', 'orange', true)
-        tagDao.update('ownerId', 'tag', tag) >> new Tag('id', 'ownerId', 'someTagName', 'orange', true)
+        tagDao.update('ownerId', 'tagId', tag) >> new Tag('tagId', 'ownerId', 'someTagName', 'orange', true)
         when:
-        def response = tagsService.update(securityContext, 'tag', tag)
+        def response = tagsService.update(securityContext, 'tagId', tag)
         then:
         response.status == 200
     }
@@ -134,9 +133,9 @@ class TagsServiceTest extends Specification {
         principal.getName() >> 'ownerId'
         def tag = new Tag(null, null, 'newTagName', 'orange', true)
         def tagAfterUpdate = new Tag('id', 'ownerId', 'someTagName', 'orange', true)
-        tagDao.update('ownerId', 'tag', tag) >> tagAfterUpdate
+        tagDao.update('ownerId', 'id', tag) >> tagAfterUpdate
         when:
-        def response = tagsService.update(securityContext, 'tag', tag)
+        def response = tagsService.update(securityContext, 'id', tag)
         then:
         response.entity.is(tagAfterUpdate)
     }
@@ -145,9 +144,9 @@ class TagsServiceTest extends Specification {
         given:
         principal.getName() >> 'ownerId'
         def tag = new Tag(null, null, 'newTagName', 'orange', true)
-        tagDao.update('ownerId', 'tag', tag) >> {throw new NonExistingResourceOperationException('')}
+        tagDao.update('ownerId', 'tagId', tag) >> {throw new NonExistingResourceOperationException('')}
         when:
-        def response = tagsService.update(securityContext, 'tag', tag)
+        def response = tagsService.update(securityContext, 'tagId', tag)
         then:
         response.status == 404
     }
