@@ -67,7 +67,7 @@ public class TagsService {
         String ownerId = securityContext.getUserPrincipal().getName();
         tag.setOwnerId(ownerId);
         Tag existingTagWithSameName = tagDao.findByName(tag.getOwnerId(), tag.getName());
-        if (existingTagWithSameName != null) {
+        if (existingTagWithSameName != null && !existingTagWithSameName.getId().equals(tagId)) {
             return Response.status(Response.Status.BAD_REQUEST).entity("Tag with name: " + tag.getName() + " already exists.").build();
         }
         try {

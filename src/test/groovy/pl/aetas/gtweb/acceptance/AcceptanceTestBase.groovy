@@ -43,6 +43,11 @@ abstract class AcceptanceTestBase extends Specification {
     }
 
 
+    public static void main(String[] args) {
+        println (new AcceptanceTestBase() {}.createSessionWithUser('mariusz'))
+    }
+
+
 
 
 

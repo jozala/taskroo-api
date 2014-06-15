@@ -147,4 +147,23 @@ class TagsServiceSpec extends AcceptanceTestBase {
         then: "response is 400"
         response.status == 400
     }
+
+    def "should change colour of tag when request send with the same name but different colour"() {
+        given: "Tag 'abc' exists"
+        def sessionId = createSessionWithUser(TEST_USER_ID)
+        def tag = '{"name": "abc", "color": "gray", "visibleInWorkView": true}'
+        def existingTagResponse = client.post(path: 'tags', headers: ['Authorization': generateAuthorizationHeader(sessionId)], body: tag, requestContentType: ContentType.JSON)
+        when: "client sends PUT request to update tag 'abc' with new color"
+        def updatedTag = '{"name": "abc", "color": "violet", "visibleInWorkView": true}'
+        def tagAfterUpdateResponse = client.put(path: "tags/$existingTagResponse.data.id", headers: ['Authorization': generateAuthorizationHeader(sessionId)], body: updatedTag, requestContentType: ContentType.JSON)
+        then: 'response code should be 200 OK'
+        tagAfterUpdateResponse.status == 200
+        and: "response should contain updated tag"
+        tagAfterUpdateResponse.data.name == 'abc'
+        tagAfterUpdateResponse.data.color == 'violet'
+        tagAfterUpdateResponse.data.visibleInWorkView == true
+        and: "tag's colour should be updated in DB"
+        def tagDbObject = tagsCollection.findOne(new BasicDBObject('_id', new ObjectId(existingTagResponse.data.id)))
+        tagDbObject.color == 'violet'
+    }
 }
