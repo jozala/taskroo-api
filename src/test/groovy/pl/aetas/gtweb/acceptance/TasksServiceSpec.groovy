@@ -219,6 +219,24 @@ class TasksServiceSpec extends AcceptanceTestBase {
         response.data.subtasks.first().id == taskBResponse.data.id
     }
 
+    def "should change all subtasks state to finished when task is updated to be finished"() {
+        given: "user is authenticated"
+        def sessionId = createSessionWithUser(TEST_USER_ID)
+        and: "user has task A with subtask B"
+        def taskAResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON,
+                headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        def taskBResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON,
+                headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        client.post(path: "tasks/${taskAResponse.data.id}/subtasks/${taskBResponse.data.id}", headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        when: "client sends PUT request to set task A as finished"
+        def response = client.put(path: "tasks/${taskAResponse.data.id}", body: UPDATED_JSON_TASK,
+                requestContentType: ContentType.JSON, headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        then: "subtask of A (task B) in response should be set as finished"
+        response.data.subtasks.first().finished == true
+        and: "task B should be set in DB as finished"
+        tasksCollection.findOne(new BasicDBObject('_id', new ObjectId(taskBResponse.data.id))).get("finished") == true
+    }
+
     private static String UPDATED_JSON_TASK =
             // closed date: Tue May 06 2014 21:26:00
             // due date: Tue Mar 20 2014 00:00:00

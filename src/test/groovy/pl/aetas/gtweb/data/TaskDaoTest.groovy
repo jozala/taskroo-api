@@ -538,4 +538,24 @@ class TaskDaoTest extends DaoTestBase {
         then:
         thrown(NonExistingResourceOperationException);
     }
+
+    def "should set subtask to finished when parent task state is updated to finished"() {
+        given:
+        def parentTask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle1')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
+                .build()
+        def subTask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle2')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
+                .build()
+        parentTask = taskDao.insert(parentTask)
+        subTask = taskDao.insert(subTask)
+        taskDao.addSubtask('mariusz', parentTask.id, subTask.id)
+        when:
+        def parentTaskFinished = new Task.TaskBuilder().setId(parentTask.id).setOwnerId('mariusz').setTitle('taskTitle1')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate()).setFinished(true)
+                .build()
+        taskDao.update('mariusz', parentTaskFinished)
+        then:
+        tasksCollection.findOne(new BasicDBObject('_id', new ObjectId(subTask.id))).get("finished") == true
+    }
 }

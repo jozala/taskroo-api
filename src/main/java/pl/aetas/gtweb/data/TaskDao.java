@@ -150,6 +150,7 @@ public class TaskDao {
         Objects.requireNonNull(ownerId);
         Objects.requireNonNull(task);
 
+
         DBObject findByIdAndOwnerIdQuery = QueryBuilder.start(ID_KEY).is(new ObjectId(task.getId()))
                 .and(TaskDao.OWNER_ID_KEY).is(ownerId).get();
 
@@ -163,6 +164,9 @@ public class TaskDao {
                 .append(FINISHED_KEY, task.isFinished())
                 .append(TAGS_KEY, tagsIdsForTask)
                 .get();
+
+        tasksCollection.update(findTaskWithSubtasksQuery(ownerId, task.getId()),
+                new BasicDBObject("$set", new BasicDBObject(FINISHED_KEY, task.isFinished())), false, true);
 
         DBObject dbTaskAfterUpdate = tasksCollection.findAndModify(findByIdAndOwnerIdQuery, null, null, false,
                 new BasicDBObject("$set", taskDbObject), true, false);
