@@ -277,4 +277,9 @@ public class TaskDao {
 
         return tasks.iterator().next();
     }
+
+    public Task moveToTopLevel(String ownerId, String taskId) throws NonExistingResourceOperationException {
+        moveTaskWithSubtasksToTopLevel(ownerId, taskId);
+        return getTask(ownerId, taskId);
+    }
 }

@@ -496,4 +496,46 @@ class TaskDaoTest extends DaoTestBase {
         def subSubtaskDbAfterUpdate = tasksCollection.findOne(new BasicDBObject('_id', new ObjectId(subSubtask.id)))
         subSubtaskDbAfterUpdate.path == [topParentTask.id,parentTask.id,subtask.id]
     }
+
+    def "should remove task's path when task is moved to top level"() {
+        given:
+        def parentTask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle1')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
+                .build()
+        def subTask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle2')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
+                .build()
+        parentTask = taskDao.insert(parentTask)
+        subTask = taskDao.insert(subTask)
+        taskDao.addSubtask('mariusz', parentTask.id, subTask.id)
+        when:
+        taskDao.moveToTopLevel('mariusz', subTask.id)
+        then:
+        def subtaskAfterUpdateDb = tasksCollection.findOne(new BasicDBObject('_id', new ObjectId(subTask.id)))
+        subtaskAfterUpdateDb.get('path').isEmpty()
+    }
+
+    def "should return updated task when task has been moved to top level"() {
+        given:
+        def parentTask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle1')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
+                .build()
+        def subTask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle2')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
+                .build()
+        parentTask = taskDao.insert(parentTask)
+        subTask = taskDao.insert(subTask)
+        taskDao.addSubtask('mariusz', parentTask.id, subTask.id)
+        when:
+        def taskAfterUpdate = taskDao.moveToTopLevel('mariusz', subTask.id)
+        then:
+        taskAfterUpdate.id == subTask.id
+    }
+
+    def "should throw NonExistingResourceOperationException when trying to move non-existing task to top-level"() {
+        when:
+        taskDao.moveToTopLevel('mariusz', ObjectId.get().toString())
+        then:
+        thrown(NonExistingResourceOperationException);
+    }
 }

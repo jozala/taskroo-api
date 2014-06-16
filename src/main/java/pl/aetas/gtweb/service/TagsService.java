@@ -59,6 +59,7 @@ public class TagsService {
         return Response.noContent().build();
     }
 
+    // TODO throw exception (400) when tag is null
     @PUT
     @Path("{tagId}")
     @Produces(MediaType.APPLICATION_JSON)

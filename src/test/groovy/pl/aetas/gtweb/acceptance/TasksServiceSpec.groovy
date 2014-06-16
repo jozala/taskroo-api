@@ -230,6 +230,19 @@ class TasksServiceSpec extends AcceptanceTestBase {
         response.status == 404
     }
 
+    def "should return 400 (bad request) when trying to update task and task not given"() {
+        given: "user is authenticated"
+        def sessionId = createSessionWithUser(TEST_USER_ID)
+        and: "user has created a task"
+        def taskCreatedResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON,
+                headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        when: "client sends PUT request without task given in body"
+        def response = client.put(path: "tasks/${taskCreatedResponse.data.id}",
+                requestContentType: ContentType.JSON, headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        then:
+        response.status == 400
+    }
+
     def "should return 404 when trying to update another user's task"() {
         given: 'user A exists in session and has tasks'
         def userASessionId = createSessionWithUser(TEST_USER_ID)
@@ -402,5 +415,82 @@ class TasksServiceSpec extends AcceptanceTestBase {
         response.data.first().subtasks.first().id == taskAResponse.data.id
         response.data.first().subtasks.first().subtasks.first().id == taskBResponse.data.id
         response.data.first().subtasks.first().subtasks.first().subtasks.first().id == taskCResponse.data.id
+    }
+
+    def "should move task of given id to top level tasks"() {
+        given: "user is authenticated"
+        def sessionId = createSessionWithUser(TEST_USER_ID)
+        and: "user has task A with subtask B"
+        def taskAResponse = client.post(path: 'tasks', body: '{"title": "taskTitleA"}', requestContentType: ContentType.JSON, headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        def taskBResponse = client.post(path: 'tasks', body: '{"title": "taskTitleB"}', requestContentType: ContentType.JSON, headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        client.post(path: "tasks/${taskAResponse.data.id}/subtasks/${taskBResponse.data.id}", headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        when: "client sends POST request to move task B to the top level"
+        def response = client.post(path: "tasks/${taskBResponse.data.id}", headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        then: "task B should be returned"
+        response.data.id == taskBResponse.data.id
+        and: "task B path should be empty in DB"
+        def taskBDb = tasksCollection.findOne(new BasicDBObject('_id', new ObjectId(response.data.id)), new BasicDBObject('path', true))
+        taskBDb.get('path').isEmpty()
+    }
+
+    def "should remove task from parent task's subtasks when task is moved to top level"() {
+        given: "user is authenticated"
+        def sessionId = createSessionWithUser(TEST_USER_ID)
+        and: "user has three tasks, task A with subtask B with subtask task C"
+        def taskAResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON, headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        def taskBResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON, headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        def taskCResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON, headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        client.post(path: "tasks/${taskAResponse.data.id}/subtasks/${taskBResponse.data.id}", headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        client.post(path: "tasks/${taskBResponse.data.id}/subtasks/${taskCResponse.data.id}", headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        when: "client sends POST request to move task B to top-level"
+        client.post(path: "tasks/${taskBResponse.data.id}", headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        then: "task A should not have any subtasks"
+        def response = client.get([path: 'tasks', headers: ['Authorization': generateAuthorizationHeader(sessionId)]])
+        response.data.find { it.id == taskAResponse.data.id }.subtasks.isEmpty()
+    }
+
+    def "should move whole task's hierarchy from parent task's subtasks when task is moved to top level"() {
+        given: "user is authenticated"
+        def sessionId = createSessionWithUser(TEST_USER_ID)
+        and: "user has three tasks, task A with subtask B1 and B2"
+        def taskAResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON, headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        def taskB1Response = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON, headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        def taskB2Response = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON, headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        client.post(path: "tasks/${taskAResponse.data.id}/subtasks/${taskB1Response.data.id}", headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        client.post(path: "tasks/${taskAResponse.data.id}/subtasks/${taskB2Response.data.id}", headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        and: "task B1 has subtask C1"
+        def taskC1Response = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON, headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        client.post(path: "tasks/${taskB1Response.data.id}/subtasks/${taskC1Response.data.id}", headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        when: "client sends POST request to move task B1 to top-level"
+        client.post(path: "tasks/${taskB1Response.data.id}", headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        then: "task A should not have have only subtask B2"
+        def response = client.get([path: 'tasks', headers: ['Authorization': generateAuthorizationHeader(sessionId)]])
+        response.data.find { it.id == taskAResponse.data.id }.subtasks.size() == 1
+        response.data.find { it.id == taskAResponse.data.id }.subtasks.first().id == taskB2Response.data.id
+        and: "task C1 should have only task B1 in path in DB"
+        def taskC1Db = tasksCollection.findOne(new BasicDBObject('_id', new ObjectId(taskC1Response.data.id)))
+        taskC1Db.get('path').toSet() == [taskB1Response.data.id].toSet()
+    }
+
+    def "should return 404 when trying to move non existing task to top-level"() {
+        given: "user is authenticated"
+        def sessionId = createSessionWithUser(TEST_USER_ID)
+        when: "client sends POST request to move non-existing task to top-level"
+        def response = client.post(path: "tasks/${ObjectId.get().toString()}", headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        then: "404 (not found) is returned in response"
+        response.status == 404
+    }
+
+    def "should return 404 when trying to move task of another user to top-level"() {
+        given: "user A is authenticated and has task"
+        def userASessionId = createSessionWithUser(TEST_USER_ID)
+        def taskOfUserAResponse = client.post(path: 'tasks', body: '{"title": "taskTitle1"}', requestContentType: ContentType.JSON,
+                headers: ['Authorization': generateAuthorizationHeader(userASessionId)])
+        and: 'user B exists without any tasks'
+        def userBSessionId = createSessionWithUser('UserB')
+        when: "client sends POST request as user B to move task of user A to top-level"
+        def response = client.post(path: "tasks/${taskOfUserAResponse.data.id}", headers: ['Authorization': generateAuthorizationHeader(userBSessionId)])
+        then: "404 (not found) is returned in response"
+        response.status == 404
     }
 }

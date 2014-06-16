@@ -15,11 +15,10 @@ class TasksServiceTest extends Specification {
     TasksService tasksService
 
     TaskDao taskDao = Mock(TaskDao)
-    TagDao tagDao = Mock(TagDao)
     SecurityContext securityContext = Mock(SecurityContext)
 
     void setup() {
-        tasksService = new TasksService(taskDao, tagDao);
+        tasksService = new TasksService(taskDao);
 
         def principal = Mock(Principal)
         principal.getName() >> TEST_USER_ID

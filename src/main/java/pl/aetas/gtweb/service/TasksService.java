@@ -2,7 +2,10 @@ package pl.aetas.gtweb.service;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import pl.aetas.gtweb.data.*;
+import pl.aetas.gtweb.data.ConcurrentTasksModificationException;
+import pl.aetas.gtweb.data.NonExistingResourceOperationException;
+import pl.aetas.gtweb.data.TaskDao;
+import pl.aetas.gtweb.data.UnsupportedDataOperationException;
 import pl.aetas.gtweb.domain.Tag;
 import pl.aetas.gtweb.domain.Task;
 
@@ -26,12 +29,10 @@ public class TasksService {
     private static final Logger LOGGER = LogManager.getLogger();
 
     private final TaskDao taskDao;
-    private final TagDao tagDao;
 
     @Inject
-    public TasksService(TaskDao taskDao, TagDao tagDao) {
+    public TasksService(TaskDao taskDao) {
         this.taskDao = taskDao;
-        this.tagDao = tagDao;
     }
 
     @GET
@@ -78,6 +79,9 @@ public class TasksService {
     @Consumes(MediaType.APPLICATION_JSON)
     public Response update(@Context SecurityContext sc, @PathParam("taskId") String id, Task task) {
         LOGGER.debug("Update task request received");
+        if (task == null) {
+            throw new WebApplicationException(Response.Status.BAD_REQUEST);
+        }
         task.setId(id);
         for (Tag tag : task.getTags()) {
             tag.setOwnerId(sc.getUserPrincipal().getName());
@@ -112,7 +116,19 @@ public class TasksService {
         } catch (ConcurrentTasksModificationException e) {
             return Response.status(Response.Status.CONFLICT).entity(e.getMessage()).build();
         }
+    }
 
+    @POST
+    @Path("{subtaskId}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response moveToTopLevel(@Context SecurityContext sc, @PathParam("subtaskId") String subtaskId) {
+        Objects.requireNonNull(subtaskId);
+        try {
+            Task taskAfterUpdate = taskDao.moveToTopLevel(sc.getUserPrincipal().getName(), subtaskId);
+            return Response.ok(taskAfterUpdate).build();
+        } catch (NonExistingResourceOperationException e) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
     }
 }
 
