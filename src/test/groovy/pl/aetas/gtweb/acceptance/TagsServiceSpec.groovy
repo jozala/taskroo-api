@@ -166,4 +166,15 @@ class TagsServiceSpec extends AcceptanceTestBase {
         def tagDbObject = tagsCollection.findOne(new BasicDBObject('_id', new ObjectId(existingTagResponse.data.id)))
         tagDbObject.color == 'violet'
     }
+
+    def "should return 400 (bad request) when client sends PUT request with tag id and no body"() {
+        given: "Tag 'abc' exists"
+        def sessionId = createSessionWithUser(TEST_USER_ID)
+        def tag = '{"name": "abc", "color": "gray", "visibleInWorkView": true}'
+        def existingTagResponse = client.post(path: 'tags', headers: ['Authorization': generateAuthorizationHeader(sessionId)], body: tag, requestContentType: ContentType.JSON)
+        when: "client sends PUT request to update tag 'abc' and not specify updated tag in body"
+        def tagAfterUpdateResponse = client.put(path: "tags/$existingTagResponse.data.id", headers: ['Authorization': generateAuthorizationHeader(sessionId)], requestContentType: ContentType.JSON)
+        then: 'response code should be 400 Bad Request'
+        tagAfterUpdateResponse.status == 400
+    }
 }

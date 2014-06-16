@@ -42,7 +42,7 @@ class SecurityContextFilterTest extends Specification {
         ContainerRequestContext containerRequestContext = Mock(ContainerRequestContext)
         containerRequestContext.getHeaderString('Authorization') >> 'GTWebAuth realm="gtweb@aetas.pl",cnonce="uniqueValue",tokenKey="someTokenKey"'
         def session = new Session('someTokenKey', 'userId', [Role.USER].toSet(), null, null)
-        sessionDao.findOne('someTokenKey') >> session
+        sessionDao.findOneAndUpdateLastAccessedTime('someTokenKey') >> session
         when:
         securityContextFilter.filter(containerRequestContext)
         then:

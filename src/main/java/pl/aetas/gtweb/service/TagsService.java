@@ -59,12 +59,14 @@ public class TagsService {
         return Response.noContent().build();
     }
 
-    // TODO throw exception (400) when tag is null
     @PUT
     @Path("{tagId}")
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
     public Response update(@Context SecurityContext securityContext, @PathParam("tagId") String tagId, Tag tag) {
+        if (tag == null) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
         String ownerId = securityContext.getUserPrincipal().getName();
         tag.setOwnerId(ownerId);
         Tag existingTagWithSameName = tagDao.findByName(tag.getOwnerId(), tag.getName());

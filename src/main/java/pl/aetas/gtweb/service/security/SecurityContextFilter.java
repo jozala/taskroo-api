@@ -48,7 +48,7 @@ public class SecurityContextFilter implements ContainerRequestFilter {
 
         // TODO update session last_accessed_time each time accessing the session
         if (tokenKey != null && !tokenKey.isEmpty()) {
-            session = sessionDao.findOne(tokenKey);
+            session = sessionDao.findOneAndUpdateLastAccessedTime(tokenKey);
 
             if (null != session) {
                 Set<Role> roles = new HashSet<>();

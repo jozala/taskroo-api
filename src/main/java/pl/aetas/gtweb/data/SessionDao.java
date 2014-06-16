@@ -20,8 +20,10 @@ public class SessionDao {
         this.sessionsCollection = sessionsCollection;
     }
 
-    public Session findOne(String sessionId) {
-        DBObject sessionDbObject = sessionsCollection.findOne(QueryBuilder.start("_id").is(sessionId).get());
+    public Session findOneAndUpdateLastAccessedTime(String sessionId) {
+        DBObject sessionDbObject = sessionsCollection.findAndModify(QueryBuilder.start("_id").is(sessionId).get(), null,
+                null, false, new BasicDBObject("$set", new BasicDBObject("last_accessed_time", new Date())), true, false);
+
         if (sessionDbObject == null) {
             return null;
         }
