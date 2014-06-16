@@ -172,13 +172,8 @@ public class TaskDao {
             throw new NonExistingResourceOperationException("Task with id " + task.getId() + "and ownerId " + ownerId + " not found in DB");
         }
 
-        dbTaskAfterUpdate = updateTagsIfConcurrentTagsModificationHappen(tagsIdsForTask, dbTaskAfterUpdate);
-
-        Map<String, Tag> tagsMap = new HashMap<>();
-        for (Tag tag : allUserTags) {
-            tagsMap.put(tag.getId(), tag);
-        }
-        return dbTasksConverter.convertSingleDbObjectToTask(dbTaskAfterUpdate, tagsMap);
+        updateTagsIfConcurrentTagsModificationHappen(tagsIdsForTask, dbTaskAfterUpdate);
+        return getTask(ownerId, task.getId());
     }
 
     private DBObject updateTagsIfConcurrentTagsModificationHappen(Set<String> tagsIdsForTask,

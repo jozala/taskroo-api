@@ -202,6 +202,23 @@ class TasksServiceSpec extends AcceptanceTestBase {
         tagsCollection.findOne(new BasicDBObject([_id: new ObjectId(taskDbObject.get('tags').first())])).get('name') == 'next'
     }
 
+    def "should return task with subtasks after update"() {
+        given: "user is authenticated"
+        def sessionId = createSessionWithUser(TEST_USER_ID)
+        and: "user has task A with subtask B"
+        def taskAResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON,
+                headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        def taskBResponse = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON,
+                headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        client.post(path: "tasks/${taskAResponse.data.id}/subtasks/${taskBResponse.data.id}", headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        when: "client sends PUT request to update existing task A"
+        def response = client.put(path: "tasks/${taskAResponse.data.id}", body: UPDATED_JSON_TASK,
+                requestContentType: ContentType.JSON, headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        then: "task A with subtask B is returned in the response"
+        response.data.subtasks.size() == 1
+        response.data.subtasks.first().id == taskBResponse.data.id
+    }
+
     private static String UPDATED_JSON_TASK =
             // closed date: Tue May 06 2014 21:26:00
             // due date: Tue Mar 20 2014 00:00:00
