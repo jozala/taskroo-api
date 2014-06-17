@@ -27,7 +27,7 @@ class TagsServiceSpec extends AcceptanceTestBase {
         HttpResponseDecorator response = client.get(path: 'tags', headers: ['Authorization': generateAuthorizationHeader(sessionId)])
         then: "Response should be 200 and contains all tags of specified user"
         response.status == 200
-        response.data.collect { it.remove('id'); return it } ==
+        response.data.collect { it.remove('id'); it.remove('size'); return it } ==
                 [[ownerId: 'owner1Login', name: 'tag1OfOwner1', color: 'blue', visibleInWorkView: true],
                  [ownerId: 'owner1Login', name: 'tag2OfOwner1', color: 'white', visibleInWorkView: false],
                  [ownerId: 'owner1Login', name: 'tag3OfOwner1', color: 'black', visibleInWorkView: false]]

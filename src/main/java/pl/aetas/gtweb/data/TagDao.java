@@ -8,10 +8,7 @@ import org.springframework.stereotype.Repository;
 import pl.aetas.gtweb.domain.Tag;
 
 import javax.inject.Inject;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 @Repository
 public class TagDao {
@@ -37,7 +34,28 @@ public class TagDao {
 
     public List<Tag> getAllTagsByOwnerId(String ownerId) {
         DBCursor dbTags = tagsCollection.find(QueryBuilder.start(OWNER_ID_KEY).is(ownerId).get());
-        return dbTagConverter.convertDbObjectsToSetOfTags(dbTags.toArray());
+
+        Map<String, Integer> numberOfTasksPerTag = getNumberOfTasksForTags(ownerId);
+        List<Tag> tags = dbTagConverter.convertDbObjectsToSetOfTags(dbTags.toArray());
+        for (Tag tag : tags) {
+            if (numberOfTasksPerTag.containsKey(tag.getId())) {
+                tag.setSize(numberOfTasksPerTag.get(tag.getId()));
+            }
+        }
+        return tags;
+    }
+
+    private Map<String, Integer> getNumberOfTasksForTags(String ownerId) {
+        AggregationOutput aggregate = tasksCollection.aggregate(new BasicDBObject("$match", new BasicDBObject(OWNER_ID_KEY, ownerId)),
+                new BasicDBObject("$project", new BasicDBObject("tags", 1)),
+                new BasicDBObject("$unwind", "$tags"),
+                new BasicDBObject("$group", new BasicDBObject("_id", "$tags").append("size", new BasicDBObject("$sum", 1))));
+
+        Map<String, Integer> numberOfTasksPerTag = new HashMap<>();
+        for (DBObject tagIdWithSize : aggregate.results()) {
+            numberOfTasksPerTag.put(tagIdWithSize.get("_id").toString(), (Integer)tagIdWithSize.get("size"));
+        }
+        return numberOfTasksPerTag;
     }
 
     private boolean exists(String ownerId, String tagId) {

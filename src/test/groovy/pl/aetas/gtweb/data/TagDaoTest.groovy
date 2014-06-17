@@ -19,6 +19,7 @@ class TagDaoTest extends DaoTestBase {
 
     void cleanup() {
         tagsCollection.drop()
+        tasksCollection.drop()
     }
 
     def "should retrieve tags for specified user"() {
@@ -37,6 +38,22 @@ class TagDaoTest extends DaoTestBase {
         tag.ownerId == 'owner2Login'
         tag.color == 'pink'
         tag.isVisibleInWorkView()
+    }
+
+    def "should get number of tasks for each tag when getting all tags"() {
+        given:
+        def tag1 = new Tag(null, 'ownerId', 'one', '#123456', true)
+        def tag1AfterInsert = tagDao.insert(tag1)
+        def task1 = new Task.TaskBuilder().setOwnerId('ownerId').setTitle('taskTitle').addTag(tag1AfterInsert).build()
+        def task2 = new Task.TaskBuilder().setOwnerId('ownerId').setTitle('taskTitle').addTag(tag1AfterInsert).build()
+        def task3 = new Task.TaskBuilder().setOwnerId('ownerId').setTitle('taskTitle').addTag(tag1AfterInsert).build()
+        taskDao.insert(task1)
+        taskDao.insert(task2)
+        taskDao.insert(task3)
+        when:
+        def tagsFromDao = tagDao.getAllTagsByOwnerId('ownerId')
+        then:
+        tagsFromDao.first().size == 3
     }
 
     def "should return tag when trying to find one with specified name and ownerId"() {

@@ -15,6 +15,7 @@ public class Tag {
     private final String name;
     private final String color;
     private final boolean visibleInWorkView;
+    private int size;
 
     @JsonCreator
     public Tag(@JsonProperty("id") String id, @JsonProperty("ownerId") String ownerId, @JsonProperty("name") String name,
@@ -44,6 +45,14 @@ public class Tag {
 
     public String getColor() {
         return color;
+    }
+
+    public int getSize() {
+        return size;
+    }
+
+    public void setSize(int size) {
+        this.size = size;
     }
 
     public Boolean isVisibleInWorkView() {
