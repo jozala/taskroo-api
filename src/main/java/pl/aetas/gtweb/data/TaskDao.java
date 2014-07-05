@@ -161,12 +161,8 @@ public class TaskDao {
                 .append(DUE_DATE_KEY, task.getDueDate())
                 .append(START_DATE_KEY, task.getStartDate())
                 .append(CLOSED_DATE_KEY, task.getClosedDate())
-                .append(FINISHED_KEY, task.isFinished())
                 .append(TAGS_KEY, tagsIdsForTask)
                 .get();
-
-        tasksCollection.update(findTaskWithSubtasksQuery(ownerId, task.getId()),
-                new BasicDBObject("$set", new BasicDBObject(FINISHED_KEY, task.isFinished())), false, true);
 
         DBObject dbTaskAfterUpdate = tasksCollection.findAndModify(findByIdAndOwnerIdQuery, null, null, false,
                 new BasicDBObject("$set", taskDbObject), true, false);
@@ -176,8 +172,38 @@ public class TaskDao {
             throw new NonExistingResourceOperationException("Task with id " + task.getId() + "and ownerId " + ownerId + " not found in DB");
         }
 
+        if (task.isFinished() != dbTaskAfterUpdate.get(FINISHED_KEY)) {
+            changeTaskStatus(ownerId, task.getId(), task.isFinished());
+        }
+
         updateTagsIfConcurrentTagsModificationHappen(tagsIdsForTask, dbTaskAfterUpdate);
         return getTask(ownerId, task.getId());
+    }
+
+    private void changeTaskStatus(String ownerId, String taskId, boolean finished) {
+        DBObject findByIdAndOwnerIdQuery = QueryBuilder.start(ID_KEY).is(new ObjectId(taskId)).and(TaskDao.OWNER_ID_KEY)
+                .is(ownerId).get();
+        if (finished) {
+            tasksCollection.update(findTaskWithSubtasksQuery(ownerId, taskId),
+                    new BasicDBObject("$set", new BasicDBObject(FINISHED_KEY, finished)), false, true);
+        } else {
+            DBObject taskPathDb = tasksCollection.findOne(findByIdAndOwnerIdQuery, new BasicDBObject(PATH_KEY, true));
+            List<String> ancestorsIds = (List<String>) taskPathDb.get(PATH_KEY);
+
+            tasksCollection.update(findTaskWithAncestorsQuery(ownerId, taskId, ancestorsIds),
+                    new BasicDBObject("$set", new BasicDBObject(FINISHED_KEY, finished)), false, true);
+        }
+    }
+
+    private DBObject findTaskWithAncestorsQuery(String ownerId, String id, List<String> ancestorsIds) {
+        List<ObjectId> objectIds = new ArrayList<>(ancestorsIds.size());
+        for (String ancestorId : ancestorsIds) {
+            objectIds.add(new ObjectId(ancestorId));
+        }
+        DBObject findByIdAndOwnerIdQuery = QueryBuilder.start(ID_KEY).is(new ObjectId(id))
+                .and(TaskDao.OWNER_ID_KEY).is(ownerId).get();
+        DBObject findAncestorsByIdQuery = QueryBuilder.start(ID_KEY).in(objectIds).get();
+        return QueryBuilder.start().or(findByIdAndOwnerIdQuery, findAncestorsByIdQuery).get();
     }
 
     private DBObject updateTagsIfConcurrentTagsModificationHappen(Set<String> tagsIdsForTask,

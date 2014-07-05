@@ -237,6 +237,22 @@ class TasksServiceSpec extends AcceptanceTestBase {
         tasksCollection.findOne(new BasicDBObject('_id', new ObjectId(taskBResponse.data.id))).get("finished") == true
     }
 
+    def "should change all parents' state to unfinished when subtask is set to NOT finished"() {
+        given: "user is authenticated"
+        def sessionId = createSessionWithUser(TEST_USER_ID)
+        and: "user has task A with subtask B - both finished"
+        def taskAResponse = client.post(path: 'tasks', body: '{"title": "topLevelTask", "finished": true}', requestContentType: ContentType.JSON,
+                headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        def taskBResponse = client.post(path: 'tasks', body: '{"title": "subTask", "finished": true}', requestContentType: ContentType.JSON,
+                headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        client.post(path: "tasks/${taskAResponse.data.id}/subtasks/${taskBResponse.data.id}", headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        when: "user sends request to set task B as unfinished"
+        client.put(path: "tasks/$taskBResponse.data.id", body: '{"title": "subTask", "finished": false}', requestContentType: ContentType.JSON,
+                headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        then: "task A should be updated to be not finished as well as task B"
+        tasksCollection.findOne(new BasicDBObject('_id', new ObjectId(taskAResponse.data.id))).get('finished') == false
+    }
+
     private static String UPDATED_JSON_TASK =
             // closed date: Tue May 06 2014 21:26:00
             // due date: Tue Mar 20 2014 00:00:00

@@ -1,5 +1,6 @@
 package pl.aetas.gtweb.data
 import com.mongodb.BasicDBObject
+import com.mongodb.DBCollection
 import com.mongodb.DBObject
 import org.bson.types.ObjectId
 import org.joda.time.DateMidnight
@@ -10,11 +11,13 @@ import pl.aetas.gtweb.domain.Task
 class TaskDaoTest extends DaoTestBase {
 
     TaskDao taskDao
+    TagDao tagDao
+    DbTasksConverter dbTasksConverter
 
     void setup() {
         cleanup()
-        def dbTasksConverter = new DbTasksConverter()
-        def tagDao = new TagDao(tagsCollection, new DbTagConverter(), tasksCollection)
+        dbTasksConverter = new DbTasksConverter()
+        tagDao = new TagDao(tagsCollection, new DbTagConverter(), tasksCollection)
         taskDao = new TaskDao(tasksCollection, tagDao, dbTasksConverter)
     }
 
@@ -557,5 +560,41 @@ class TaskDaoTest extends DaoTestBase {
         taskDao.update('mariusz', parentTaskFinished)
         then:
         tasksCollection.findOne(new BasicDBObject('_id', new ObjectId(subTask.id))).get("finished") == true
+    }
+
+    def "should set parents tasks to NOT finished when subtask state is updated to NOT finished"() {
+        given:
+        def parentTask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle1')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate()).setFinished(true)
+                .build()
+        def subTask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle2')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate()).setFinished(true)
+                .build()
+        parentTask = taskDao.insert(parentTask)
+        subTask = taskDao.insert(subTask)
+        taskDao.addSubtask('mariusz', parentTask.id, subTask.id)
+        when:
+        def subTaskFinished = new Task.TaskBuilder().setId(subTask.id).setOwnerId('mariusz').setTitle('taskTitle2')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate()).setFinished(false)
+                .build()
+        taskDao.update('mariusz', subTaskFinished)
+        then:
+        tasksCollection.findOne(new BasicDBObject('_id', new ObjectId(parentTask.id))).get("finished") == false
+    }
+
+    def "should update task state (finished) with additional DB call only when update request has changed task state"() {
+        given: "unfinished task exists"
+        def tasksCollectionMock = Mock(DBCollection)
+        tasksCollectionMock.insert(_) >> { args -> tasksCollection.insert(args[0]) }
+        tasksCollectionMock.findAndModify(_,_,_,_,_,_,_) >>> [new BasicDBObject([_id: ObjectId.get(), title: 'title', owner_id: 'mariusz', finished: false, tags:[]]), new BasicDBObject([_id: ObjectId.get(), title: 'title', owner_id: 'mariusz', finished: false, tags:[]])]
+        tasksCollectionMock.findOne(_, _) >> new BasicDBObject([_id: ObjectId.get(), title: 'title', owner_id: 'mariusz', finished: false, tags:[], path: []])
+        tasksCollectionMock.find(_) >> { args -> tasksCollection.find(args[0]) }
+        TaskDao taskDaoWithMocks = new TaskDao(tasksCollectionMock, tagDao, dbTasksConverter)
+        def existingTask = new Task.TaskBuilder().setOwnerId("mariusz").setTitle("title").build();
+        existingTask = taskDaoWithMocks.insert(existingTask)
+        when: "request to update task, but status remain unchanged"
+        taskDaoWithMocks.update('mariusz', existingTask)
+        then: "second DB call to update task status is not made"
+        0 * tasksCollectionMock.update(_, new BasicDBObject('$set', new BasicDBObject('finished', existingTask.isFinished())), _, _);
     }
 }
