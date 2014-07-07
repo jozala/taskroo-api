@@ -41,15 +41,4 @@ abstract class AcceptanceTestBase extends Specification {
         def randomString = UUID.randomUUID().toString()
         return "GTWebAuth realm=\"gtweb@aetas.pl\", tokenKey=\"$tokenKey\", cnonce=\"$randomString\""
     }
-
-
-    public static void main(String[] args) {
-        println (new AcceptanceTestBase() {}.createSessionWithUser('mariusz'))
-    }
-
-
-
-
-
-
 }
