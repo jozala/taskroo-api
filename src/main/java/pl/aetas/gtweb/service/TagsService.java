@@ -1,5 +1,9 @@
 package pl.aetas.gtweb.service;
 
+import com.wordnik.swagger.annotations.Api;
+import com.wordnik.swagger.annotations.ApiOperation;
+import com.wordnik.swagger.annotations.ApiResponse;
+import com.wordnik.swagger.annotations.ApiResponses;
 import org.springframework.stereotype.Component;
 import pl.aetas.gtweb.data.NonExistingResourceOperationException;
 import pl.aetas.gtweb.data.TagDao;
@@ -18,6 +22,7 @@ import java.util.List;
 @Component
 @RolesAllowed("user")
 @Path("tags")
+@Api(value = "tags", description = "Operations for tags")
 public class TagsService {
 
     private final TagDao tagDao;
@@ -29,6 +34,10 @@ public class TagsService {
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
+    @ApiOperation(value = "Get all tags", responseContainer = "List", response = Tag.class)
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "Correct response"),
+            @ApiResponse(code = 403, message = "Access forbidden")})
     public List<Tag> getAll(@Context SecurityContext sc) {
         String userId = sc.getUserPrincipal().getName();
         return tagDao.getAllTagsByOwnerId(userId);
@@ -37,6 +46,11 @@ public class TagsService {
     @POST
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
+    @ApiOperation(value = "Create new tag", notes = "Returns created tag", response = Tag.class)
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "Tag with given name already exists"),
+            @ApiResponse(code = 201, message = "Tag created"),
+            @ApiResponse(code = 403, message = "Access forbidden")})
     public Response create(@Context SecurityContext securityContext, Tag tag) {
         tag.setOwnerId(securityContext.getUserPrincipal().getName());
         Tag existingTag;
@@ -48,7 +62,12 @@ public class TagsService {
     }
 
     @DELETE
-    @Path("{tagId}")
+    @Path("/{tagId}")
+    @ApiOperation(value = "Remove tag")
+    @ApiResponses(value = {
+            @ApiResponse(code = 204, message = "Tag removed"),
+            @ApiResponse(code = 404, message = "Tag not found"),
+            @ApiResponse(code = 403, message = "Access forbidden")})
     public Response delete(@Context SecurityContext securityContext, @PathParam("tagId") String tagId) {
         String ownerId = securityContext.getUserPrincipal().getName();
         try {
@@ -60,9 +79,15 @@ public class TagsService {
     }
 
     @PUT
-    @Path("{tagId}")
+    @Path("/{tagId}")
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
+    @ApiOperation(value = "Update existing tag", notes = "Returns updated tag", response = Tag.class)
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "Tag updated"),
+            @ApiResponse(code = 400, message = "Invalid input data"),
+            @ApiResponse(code = 404, message = "Tag with given id not found"),
+            @ApiResponse(code = 403, message = "Access forbidden")})
     public Response update(@Context SecurityContext securityContext, @PathParam("tagId") String tagId, Tag tag) {
         if (tag == null) {
             return Response.status(Response.Status.BAD_REQUEST).build();

@@ -10,6 +10,6 @@ public class GtwebResourceConfig extends ResourceConfig {
     public GtwebResourceConfig() {
         register(ExceptionListener.class);
         register(RolesAllowedDynamicFeature.class);
-        packages("pl.aetas.gtweb.service");
+        packages("pl.aetas.gtweb.service", "com.wordnik.swagger.jersey.listing");
     }
 }

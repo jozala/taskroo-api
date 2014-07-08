@@ -1,5 +1,6 @@
 package pl.aetas.gtweb.service;
 
+import com.wordnik.swagger.annotations.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import pl.aetas.gtweb.data.ConcurrentTasksModificationException;
@@ -24,6 +25,7 @@ import java.util.Objects;
 @Singleton
 @RolesAllowed("user")
 @Path("tasks")
+@Api(value = "tasks", description = "Operations for tasks")
 public class TasksService {
 
     private static final Logger LOGGER = LogManager.getLogger();
@@ -37,6 +39,10 @@ public class TasksService {
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
+    @ApiOperation(value = "Get all tasks", responseContainer = "List", response=Task.class)
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "Correct response"),
+            @ApiResponse(code = 403, message = "Access forbidden")})
     public Response getAll(@Context SecurityContext sc) {
         Collection<Task> tasks = taskDao.findAllByOwnerId(sc.getUserPrincipal().getName());
         return Response.ok(tasks).build();
@@ -45,6 +51,11 @@ public class TasksService {
     @POST
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
+    @ApiOperation(value = "Create new task", notes = "Returns created task with unique id", response=Task.class)
+    @ApiResponses(value = {
+            @ApiResponse(code = 201, message = "Task created"),
+            @ApiResponse(code = 400, message = "Incorrect input data"),
+            @ApiResponse(code = 403, message = "Access forbidden")})
     public Response create(@Context SecurityContext sc, Task task) {
         LOGGER.info("Create task request received");
         task.setOwnerId(sc.getUserPrincipal().getName());
@@ -62,7 +73,12 @@ public class TasksService {
     }
 
     @DELETE
-    @Path("{taskId}")
+    @Path("/{taskId}")
+    @ApiOperation(value = "Delete task")
+    @ApiResponses(value = {
+            @ApiResponse(code = 204, message = "Task deleted"),
+            @ApiResponse(code = 403, message = "Access forbidden"),
+            @ApiResponse(code = 404, message = "Task with given id does not exist")})
     public Response delete(@Context SecurityContext sc, @PathParam("taskId") String id) {
         LOGGER.debug("Delete task request received");
         try {
@@ -74,9 +90,15 @@ public class TasksService {
     }
 
     @PUT
-    @Path("{taskId}")
+    @Path("/{taskId}")
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
+    @ApiOperation(value = "Update task", notes = "Returns updated task", response = Task.class)
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "Task updated"),
+            @ApiResponse(code = 400, message = "Incorrect input data"),
+            @ApiResponse(code = 403, message = "Access forbidden"),
+            @ApiResponse(code = 404, message = "Task with given id does not exist")})
     public Response update(@Context SecurityContext sc, @PathParam("taskId") String id, Task task) {
         LOGGER.debug("Update task request received");
         if (task == null) {
@@ -98,8 +120,15 @@ public class TasksService {
     }
 
     @POST
-    @Path("{parentTaskId}/subtasks/{subtaskId}")
+    @Path("/{parentTaskId}/subtasks/{subtaskId}")
     @Produces(MediaType.APPLICATION_JSON)
+    @ApiOperation(value = "Move task to be subtask of parent task", notes = "Returns parent task", response = Task.class)
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "Task moved"),
+            @ApiResponse(code = 400, message = "Incorrect request"),
+            @ApiResponse(code = 403, message = "Access forbidden"),
+            @ApiResponse(code = 404, message = "Parent task or subtask with given id does not exist"),
+            @ApiResponse(code = 409, message = "Conflicting concurrent task or tags modification")})
     public Response addSubtask(@Context SecurityContext sc, @PathParam("parentTaskId") String parentTaskId,
                                @PathParam("subtaskId") String subtaskId) {
         Objects.requireNonNull(parentTaskId);
@@ -119,8 +148,13 @@ public class TasksService {
     }
 
     @POST
-    @Path("{subtaskId}")
+    @Path("/{subtaskId}")
     @Produces(MediaType.APPLICATION_JSON)
+    @ApiOperation(value = "Move task to be top-level task", notes = "Returns moved task", response = Task.class)
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "Task moved"),
+            @ApiResponse(code = 403, message = "Access forbidden"),
+            @ApiResponse(code = 404, message = "Task with given id does not exist")})
     public Response moveToTopLevel(@Context SecurityContext sc, @PathParam("subtaskId") String subtaskId) {
         Objects.requireNonNull(subtaskId);
         try {
