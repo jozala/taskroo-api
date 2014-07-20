@@ -35,7 +35,7 @@ public class TagDao {
     public List<Tag> getAllTagsByOwnerId(String ownerId) {
         DBCursor dbTags = tagsCollection.find(QueryBuilder.start(OWNER_ID_KEY).is(ownerId).get());
 
-        Map<String, Integer> numberOfTasksPerTag = getNumberOfTasksForTags(ownerId);
+        Map<String, Integer> numberOfTasksPerTag = getNumberOfUnfinishedTasksForTags(ownerId);
         List<Tag> tags = dbTagConverter.convertDbObjectsToSetOfTags(dbTags.toArray());
         for (Tag tag : tags) {
             if (numberOfTasksPerTag.containsKey(tag.getId())) {
@@ -45,8 +45,9 @@ public class TagDao {
         return tags;
     }
 
-    private Map<String, Integer> getNumberOfTasksForTags(String ownerId) {
-        AggregationOutput aggregate = tasksCollection.aggregate(new BasicDBObject("$match", new BasicDBObject(OWNER_ID_KEY, ownerId)),
+    private Map<String, Integer> getNumberOfUnfinishedTasksForTags(String ownerId) {
+        AggregationOutput aggregate = tasksCollection.aggregate(
+                new BasicDBObject("$match", new BasicDBObject(OWNER_ID_KEY, ownerId).append(TaskDao.FINISHED_KEY, false)),
                 new BasicDBObject("$project", new BasicDBObject("tags", 1)),
                 new BasicDBObject("$unwind", "$tags"),
                 new BasicDBObject("$group", new BasicDBObject("_id", "$tags").append("size", new BasicDBObject("$sum", 1))));

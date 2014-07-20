@@ -40,12 +40,13 @@ class TagDaoTest extends DaoTestBase {
         tag.isVisibleInWorkView()
     }
 
-    def "should get number of tasks for each tag when getting all tags"() {
+    def "should get number of unfinished tasks for each tag when getting all tags"() {
         given:
         def tag1 = new Tag(null, 'ownerId', 'one', '#123456', true)
         def tag1AfterInsert = tagDao.insert(tag1)
         def task1 = new Task.TaskBuilder().setOwnerId('ownerId').setTitle('taskTitle').addTag(tag1AfterInsert).build()
-        def task2 = new Task.TaskBuilder().setOwnerId('ownerId').setTitle('taskTitle').addTag(tag1AfterInsert).build()
+        def task2 = new Task.TaskBuilder().setOwnerId('ownerId').setTitle('taskTitle').addTag(tag1AfterInsert)
+                .setFinished(true).build()
         def task3 = new Task.TaskBuilder().setOwnerId('ownerId').setTitle('taskTitle').addTag(tag1AfterInsert).build()
         taskDao.insert(task1)
         taskDao.insert(task2)
@@ -53,7 +54,7 @@ class TagDaoTest extends DaoTestBase {
         when:
         def tagsFromDao = tagDao.getAllTagsByOwnerId('ownerId')
         then:
-        tagsFromDao.first().size == 3
+        tagsFromDao.first().size == 2
     }
 
     def "should return tag when trying to find one with specified name and ownerId"() {
