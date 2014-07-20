@@ -172,7 +172,7 @@ public class TaskDao {
             throw new NonExistingResourceOperationException("Task with id " + task.getId() + "and ownerId " + ownerId + " not found in DB");
         }
 
-        if (task.isFinished() != dbTaskAfterUpdate.get(FINISHED_KEY)) {
+        if (task.isFinished() != (boolean) dbTaskAfterUpdate.get(FINISHED_KEY)) {
             changeTaskStatus(ownerId, task.getId(), task.isFinished());
         }
 
