@@ -222,7 +222,7 @@ public class Task {
         }
 
         @JsonProperty("tags")
-        public TaskBuilder addTask(List<Tag> tags) {
+        public TaskBuilder addTags(List<Tag> tags) {
             this.tags.addAll(tags);
             return this;
         }
