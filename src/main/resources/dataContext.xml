@@ -8,7 +8,7 @@ http://www.springframework.org/schema/context/spring-context.xsd">
 
     <import resource="classpath:mongo-connector-context.xml" />
 
-    <context:component-scan base-package="pl.aetas.gtweb.data" />
+    <context:component-scan base-package="com.taskroo.data" />
 
     <bean name="tagsCollection" factory-bean="collectionsFactory" factory-method="getCollection">
         <constructor-arg value="tags" />

@@ -2,7 +2,7 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_3_0.xsd">
 
-    <module-name>gtweb</module-name>
+    <module-name>taskroo-api</module-name>
 
     <listener>
         <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
@@ -14,16 +14,16 @@
     </context-param>
 
     <servlet>
-        <servlet-name>GTWeb</servlet-name>
+        <servlet-name>TaskRoo-API</servlet-name>
         <servlet-class>org.glassfish.jersey.servlet.ServletContainer</servlet-class>
         <init-param>
             <param-name>javax.ws.rs.Application</param-name>
-            <param-value>pl.aetas.gtweb.server.GtwebResourceConfig</param-value>
+            <param-value>com.taskroo.server.TaskRooResourceConfig</param-value>
         </init-param>
         <load-on-startup>1</load-on-startup>
     </servlet>
     <servlet-mapping>
-        <servlet-name>GTWeb</servlet-name>
+        <servlet-name>TaskRoo-API</servlet-name>
         <url-pattern>/*</url-pattern>
     </servlet-mapping>
 
