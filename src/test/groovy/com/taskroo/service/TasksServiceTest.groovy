@@ -89,7 +89,7 @@ class TasksServiceTest extends Specification {
         }
         taskDao.findAllByOwnerId(TEST_USER_ID) >> tasks
         when:
-        def response = tasksService.getAll(securityContext)
+        def response = tasksService.getAll(securityContext, null)
         then:
         response.status == 200
         response.entity == tasks

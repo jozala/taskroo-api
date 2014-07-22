@@ -100,14 +100,13 @@ class TasksServiceSpec extends AcceptanceTestBase {
         def sessionId = createSessionWithUser(TEST_USER_ID)
         client.post(path: 'tasks', body: '{"title": "taskTitle1"}', requestContentType: ContentType.JSON,
                 headers: ['Authorization': generateAuthorizationHeader(sessionId)])
-        client.post(path: 'tasks', body: '{"title": "taskTitle2"}', requestContentType: ContentType.JSON,
+        client.post(path: 'tasks', body: '{"title": "taskTitle2", "finished": true}', requestContentType: ContentType.JSON,
                 headers: ['Authorization': generateAuthorizationHeader(sessionId)])
         when: 'client sends request to get all tasks'
         def response = client.get([path: 'tasks', headers: ['Authorization': generateAuthorizationHeader(sessionId)]])
         then: 'response contains list of tasks'
         response.status == 200
-        response.data.collect { it.title }.contains('taskTitle1')
-        response.data.collect { it.title }.contains('taskTitle2')
+        response.data.collect { it.title }.toSet() == ['taskTitle1', 'taskTitle2'].toSet()
     }
 
     def "should remove task of given id from DB and return 204"() {
@@ -543,5 +542,52 @@ class TasksServiceSpec extends AcceptanceTestBase {
         def response = client.post(path: "tasks/${taskOfUserAResponse.data.id}", headers: ['Authorization': generateAuthorizationHeader(userBSessionId)])
         then: "404 (not found) is returned in response"
         response.status == 404
+    }
+
+    def "should return all unfinished tasks of user from session and 200 response when retrieving unfinished tasks"() {
+        given: "user A is authenticated"
+        def userASessionId = createSessionWithUser(TEST_USER_ID)
+        and: "user A has 2 unfinished and 2 finished tasks"
+        client.post(path: 'tasks', body: '{"title": "taskTitle1"}', requestContentType: ContentType.JSON,
+                headers: ['Authorization': generateAuthorizationHeader(userASessionId)])
+        client.post(path: 'tasks', body: '{"title": "taskTitle2"}', requestContentType: ContentType.JSON,
+                headers: ['Authorization': generateAuthorizationHeader(userASessionId)])
+        client.post(path: 'tasks', body: '{"title": "taskTitle3", "finished": true}', requestContentType: ContentType.JSON,
+                headers: ['Authorization': generateAuthorizationHeader(userASessionId)])
+        client.post(path: 'tasks', body: '{"title": "taskTitle4", "finished": true}', requestContentType: ContentType.JSON,
+                headers: ['Authorization': generateAuthorizationHeader(userASessionId)])
+        when: "client sends GET request as user A to get all unfinished tasks"
+        def response = client.get([path: 'tasks;finished=false', headers: ['Authorization': generateAuthorizationHeader(userASessionId)]])
+        then: "200 (OK) is returned is response"
+        response.status == 200
+        and: "response body should contain all unfinished tasks od user A"
+        response.data.size() == 2
+        response.data.every { it.finished == false }
+        response.data.any { it.title == "taskTitle1" }
+        response.data.any { it.title == "taskTitle2" }
+    }
+
+    def "should return all finished tasks of user from session and 200 response when retrieving finished tasks"() {
+        given: "user A is authenticated"
+        def userASessionId = createSessionWithUser(TEST_USER_ID)
+        and: "user A has 1 unfinished and 3 finished tasks"
+        client.post(path: 'tasks', body: '{"title": "taskTitle1"}', requestContentType: ContentType.JSON,
+                headers: ['Authorization': generateAuthorizationHeader(userASessionId)])
+        client.post(path: 'tasks', body: '{"title": "taskTitle2", "finished": true}', requestContentType: ContentType.JSON,
+                headers: ['Authorization': generateAuthorizationHeader(userASessionId)])
+        client.post(path: 'tasks', body: '{"title": "taskTitle3", "finished": true}', requestContentType: ContentType.JSON,
+                headers: ['Authorization': generateAuthorizationHeader(userASessionId)])
+        client.post(path: 'tasks', body: '{"title": "taskTitle4", "finished": true}', requestContentType: ContentType.JSON,
+                headers: ['Authorization': generateAuthorizationHeader(userASessionId)])
+        when: "client sends GET request as user A to get all unfinished tasks"
+        def response = client.get([path: 'tasks;finished=true', headers: ['Authorization': generateAuthorizationHeader(userASessionId)]])
+        then: "200 (OK) is returned is response"
+        response.status == 200
+        and: "response body should contain all unfinished tasks od user A"
+        response.data.size() == 3
+        response.data.every { it.finished == true }
+        response.data.any { it.title == 'taskTitle2' }
+        response.data.any { it.title == 'taskTitle3' }
+        response.data.any { it.title == 'taskTitle4' }
     }
 }

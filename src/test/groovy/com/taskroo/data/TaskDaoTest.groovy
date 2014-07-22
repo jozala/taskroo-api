@@ -597,4 +597,29 @@ class TaskDaoTest extends DaoTestBase {
         then: "second DB call to update task status is not made"
         0 * tasksCollectionMock.update(_, new BasicDBObject('$set', new BasicDBObject('finished', existingTask.isFinished())), _, _);
     }
+
+    def "should return only unfinished tasks when specifying to find only unfinished"() {
+        given: "customer has 2 unfinished tasks and 1 finished task"
+        def unfinishedTask1 = new Task.TaskBuilder().setOwnerId('mariusz').setTitle("taskTitle_1").setCreatedDate(new Date()).build()
+        def unfinishedTask2 = new Task.TaskBuilder().setOwnerId('mariusz').setTitle("taskTitle_2").setCreatedDate(new Date()).build()
+        def finishedTask3 = new Task.TaskBuilder().setOwnerId('mariusz').setTitle("taskTitle_3").setCreatedDate(new Date()).setFinished(true).build()
+        [unfinishedTask1, unfinishedTask2, finishedTask3].each { taskDao.insert(it) }
+        when: "specifying to find only unfinished tasks"
+        def tasks = taskDao.findAllByOwnerIdAndFinished('mariusz', false)
+        then: "list of all unfinished tasks should be returned"
+        tasks.collect { it.id }.toSet() == [unfinishedTask1, unfinishedTask2].collect { it.id }.toSet()
+    }
+
+    def "should return only finished tasks when specifying to find only finished"() {
+        given: "customer has 2 unfinished tasks and 1 finished task"
+        def unfinishedTask1 = new Task.TaskBuilder().setOwnerId('mariusz').setTitle("taskTitle_1").setCreatedDate(new Date()).build()
+        def unfinishedTask2 = new Task.TaskBuilder().setOwnerId('mariusz').setTitle("taskTitle_2").setCreatedDate(new Date()).build()
+        def finishedTask3 = new Task.TaskBuilder().setOwnerId('mariusz').setTitle("taskTitle_3").setCreatedDate(new Date()).setFinished(true).build()
+        [unfinishedTask1, unfinishedTask2, finishedTask3].each { taskDao.insert(it) }
+        when: "specifying to find only unfinished tasks"
+        def tasks = taskDao.findAllByOwnerIdAndFinished('mariusz', true)
+        then: "list of all finished tasks should be returned"
+        tasks.size() == 1
+        tasks.first().id == finishedTask3.id
+    }
 }

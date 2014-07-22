@@ -128,8 +128,20 @@ public class TaskDao {
     }
 
     public Collection<Task> findAllByOwnerId(String ownerId) {
-        DBObject queryByOwner = QueryBuilder.start(OWNER_ID_KEY).is(ownerId).get();
-        DBCursor dbTasks = tasksCollection.find(queryByOwner);
+        return findTasksByOwnerIdUsingQuery(ownerId);
+    }
+
+    public Collection<Task> findAllByOwnerIdAndFinished(String ownerId, boolean finished) {
+        DBObject queryByFinished = QueryBuilder.start(FINISHED_KEY).is(finished).get();
+        return findTasksByOwnerIdUsingQuery(ownerId, queryByFinished);
+    }
+
+    private Collection<Task> findTasksByOwnerIdUsingQuery(String ownerId, DBObject ... givenQueries) {
+        QueryBuilder finalQueryBuilder = QueryBuilder.start(OWNER_ID_KEY).is(ownerId);
+        for (DBObject givenQuery : givenQueries) {
+            finalQueryBuilder.and(givenQuery);
+        }
+        DBCursor dbTasks = tasksCollection.find(finalQueryBuilder.get());
         List<Tag> allUserTags = tagDao.getAllTagsByOwnerId(ownerId);
         return dbTasksConverter.convertToTasksTree(dbTasks.toArray(), allUserTags);
     }

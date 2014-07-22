@@ -1,14 +1,11 @@
 package com.taskroo.service;
 
+import com.taskroo.data.*;
+import com.taskroo.domain.Tag;
+import com.taskroo.domain.Task;
 import com.wordnik.swagger.annotations.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import com.taskroo.data.ConcurrentTasksModificationException;
-import com.taskroo.data.NonExistingResourceOperationException;
-import com.taskroo.data.TaskDao;
-import com.taskroo.data.UnsupportedDataOperationException;
-import com.taskroo.domain.Tag;
-import com.taskroo.domain.Task;
 
 import javax.annotation.security.RolesAllowed;
 import javax.inject.Inject;
@@ -43,8 +40,15 @@ public class TasksService {
     @ApiResponses(value = {
             @ApiResponse(code = 200, message = "Correct response"),
             @ApiResponse(code = 403, message = "Access forbidden")})
-    public Response getAll(@Context SecurityContext sc) {
-        Collection<Task> tasks = taskDao.findAllByOwnerId(sc.getUserPrincipal().getName());
+    public Response getAll(@Context SecurityContext sc,
+                           @ApiParam(value = "Specify if you want to filter by finished") @MatrixParam("finished") Boolean finished) {
+        Collection<Task> tasks;
+        String ownerId = sc.getUserPrincipal().getName();
+        if (finished == null) {
+            tasks = taskDao.findAllByOwnerId(ownerId);
+        } else {
+            tasks = taskDao.findAllByOwnerIdAndFinished(ownerId, finished);
+        }
         return Response.ok(tasks).build();
     }
 
