@@ -557,7 +557,7 @@ class TasksServiceSpec extends AcceptanceTestBase {
         client.post(path: 'tasks', body: '{"title": "taskTitle4", "finished": true}', requestContentType: ContentType.JSON,
                 headers: ['Authorization': generateAuthorizationHeader(userASessionId)])
         when: "client sends GET request as user A to get all unfinished tasks"
-        def response = client.get([path: 'tasks;finished=false', headers: ['Authorization': generateAuthorizationHeader(userASessionId)]])
+        def response = client.get([path: 'tasks', query: [finished: false], headers: ['Authorization': generateAuthorizationHeader(userASessionId)]])
         then: "200 (OK) is returned is response"
         response.status == 200
         and: "response body should contain all unfinished tasks od user A"
@@ -580,7 +580,7 @@ class TasksServiceSpec extends AcceptanceTestBase {
         client.post(path: 'tasks', body: '{"title": "taskTitle4", "finished": true}', requestContentType: ContentType.JSON,
                 headers: ['Authorization': generateAuthorizationHeader(userASessionId)])
         when: "client sends GET request as user A to get all unfinished tasks"
-        def response = client.get([path: 'tasks;finished=true', headers: ['Authorization': generateAuthorizationHeader(userASessionId)]])
+        def response = client.get([path: 'tasks', query: [finished: true], headers: ['Authorization': generateAuthorizationHeader(userASessionId)]])
         then: "200 (OK) is returned is response"
         response.status == 200
         and: "response body should contain all unfinished tasks od user A"

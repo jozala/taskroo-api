@@ -41,7 +41,7 @@ public class TasksService {
             @ApiResponse(code = 200, message = "Correct response"),
             @ApiResponse(code = 403, message = "Access forbidden")})
     public Response getAll(@Context SecurityContext sc,
-                           @ApiParam(value = "Specify if you want to filter by finished") @MatrixParam("finished") Boolean finished) {
+                           @ApiParam(value = "Specify if you want to filter by finished") @QueryParam("finished") Boolean finished) {
         Collection<Task> tasks;
         String ownerId = sc.getUserPrincipal().getName();
         if (finished == null) {
