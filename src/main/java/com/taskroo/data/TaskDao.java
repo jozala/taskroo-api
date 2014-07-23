@@ -128,22 +128,17 @@ public class TaskDao {
     }
 
     public Collection<Task> findAllByOwnerId(String ownerId) {
-        return findTasksByOwnerIdUsingQuery(ownerId);
+        DBObject queryByOwnerId = QueryBuilder.start(OWNER_ID_KEY).is(ownerId).get();
+        DBCursor dbTasks = tasksCollection.find(queryByOwnerId);
+        List<Tag> allUserTags = tagDao.getAllTagsByOwnerId(ownerId);
+        return dbTasksConverter.convertToTasksTree(dbTasks.toArray(), allUserTags);
     }
 
     public Collection<Task> findAllByOwnerIdAndFinished(String ownerId, boolean finished) {
-        DBObject queryByFinished = QueryBuilder.start(FINISHED_KEY).is(finished).get();
-        return findTasksByOwnerIdUsingQuery(ownerId, queryByFinished);
-    }
-
-    private Collection<Task> findTasksByOwnerIdUsingQuery(String ownerId, DBObject ... givenQueries) {
-        QueryBuilder finalQueryBuilder = QueryBuilder.start(OWNER_ID_KEY).is(ownerId);
-        for (DBObject givenQuery : givenQueries) {
-            finalQueryBuilder.and(givenQuery);
-        }
-        DBCursor dbTasks = tasksCollection.find(finalQueryBuilder.get());
+        DBObject queryByOwnerAndFinished = QueryBuilder.start(OWNER_ID_KEY).is(ownerId).and(FINISHED_KEY).is(finished).get();
+        DBCursor dbTasks = tasksCollection.find(queryByOwnerAndFinished);
         List<Tag> allUserTags = tagDao.getAllTagsByOwnerId(ownerId);
-        return dbTasksConverter.convertToTasksTree(dbTasks.toArray(), allUserTags);
+        return dbTasksConverter.convertToTasksTree(dbTasks.toArray(), allUserTags, true);
     }
 
     public void remove(String ownerId, String taskId) throws NonExistingResourceOperationException {

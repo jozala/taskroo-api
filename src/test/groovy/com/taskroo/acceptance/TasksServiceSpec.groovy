@@ -57,7 +57,7 @@ class TasksServiceSpec extends AcceptanceTestBase {
     def "should return Forbidden (403) with WWW-authentication domain from properties when unauthorized access"() {
         when: "client sends POST request to create a new task without authorization"
         HttpResponseDecorator response = client.post(path: 'tasks', body: JSON_TASK, requestContentType: ContentType.JSON)
-        then: "response Forbidden (403) should be returned"
+        then: "response WWW-Authenticate header with domain should be return"
         response.getFirstHeader("WWW-Authenticate").value.contains("domain=\"")
     }
 
