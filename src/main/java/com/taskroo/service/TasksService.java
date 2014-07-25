@@ -1,6 +1,9 @@
 package com.taskroo.service;
 
-import com.taskroo.data.*;
+import com.taskroo.data.ConcurrentTasksModificationException;
+import com.taskroo.data.NonExistingResourceOperationException;
+import com.taskroo.data.TaskDao;
+import com.taskroo.data.UnsupportedDataOperationException;
 import com.taskroo.domain.Tag;
 import com.taskroo.domain.Task;
 import com.wordnik.swagger.annotations.*;
@@ -10,6 +13,7 @@ import org.apache.logging.log4j.Logger;
 import javax.annotation.security.RolesAllowed;
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import javax.validation.Valid;
 import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
@@ -60,11 +64,8 @@ public class TasksService {
             @ApiResponse(code = 201, message = "Task created"),
             @ApiResponse(code = 400, message = "Incorrect input data"),
             @ApiResponse(code = 403, message = "Access forbidden")})
-    public Response create(@Context SecurityContext sc, Task task) {
+    public Response create(@Context SecurityContext sc, @Valid Task task) {
         LOGGER.info("Create task request received");
-        if (task.getTitle().isEmpty()) {
-            throw new WebApplicationException(Response.Status.BAD_REQUEST);
-        }
         task.setOwnerId(sc.getUserPrincipal().getName());
         for (Tag tag : task.getTags()) {
             tag.setOwnerId(sc.getUserPrincipal().getName());

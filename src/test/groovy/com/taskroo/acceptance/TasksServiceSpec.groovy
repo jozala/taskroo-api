@@ -47,11 +47,21 @@ class TasksServiceSpec extends AcceptanceTestBase {
         response.status == 400
     }
 
-    def "should return 400 (Bad Request) when trying to insert task with empty title"() {
+    def "should return 400 (Bad Request) and error message when trying to insert task with empty title"() {
         given: "user is authenticated"
         def sessionId = createSessionWithUser(TEST_USER_ID)
         when: "client sends POST request to create a new task with empty title"
         def response = client.post(path: 'tasks', body: '{"title": ""}', requestContentType: ContentType.JSON,
+                headers: ['Authorization': generateAuthorizationHeader(sessionId)])
+        then: "400 (Bad Request) is returned"
+        response.status == 400
+    }
+
+    def "should return 400 (Bad Request) when trying to insert task with null title"() {
+        given: "user is authenticated"
+        def sessionId = createSessionWithUser(TEST_USER_ID)
+        when: "client sends POST request to create a new task with empty title"
+        def response = client.post(path: 'tasks', body: '{"title": null}', requestContentType: ContentType.JSON,
                 headers: ['Authorization': generateAuthorizationHeader(sessionId)])
         then: "400 (Bad Request) is returned"
         response.status == 400

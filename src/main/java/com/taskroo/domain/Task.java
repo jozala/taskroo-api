@@ -3,6 +3,7 @@ package com.taskroo.domain;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import org.hibernate.validator.constraints.NotBlank;
 
 import java.util.*;
 
@@ -14,6 +15,7 @@ public class Task {
     private String id;
     @JsonIgnore
     private String ownerId;
+    @NotBlank
     private final String title;
     private final String description;
     private final Set<Tag> tags;
