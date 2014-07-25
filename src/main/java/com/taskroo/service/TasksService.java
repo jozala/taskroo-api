@@ -62,6 +62,9 @@ public class TasksService {
             @ApiResponse(code = 403, message = "Access forbidden")})
     public Response create(@Context SecurityContext sc, Task task) {
         LOGGER.info("Create task request received");
+        if (task.getTitle().isEmpty()) {
+            throw new WebApplicationException(Response.Status.BAD_REQUEST);
+        }
         task.setOwnerId(sc.getUserPrincipal().getName());
         for (Tag tag : task.getTags()) {
             tag.setOwnerId(sc.getUserPrincipal().getName());
