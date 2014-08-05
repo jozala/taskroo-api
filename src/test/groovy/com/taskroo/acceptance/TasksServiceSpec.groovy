@@ -5,6 +5,7 @@ import groovyx.net.http.ContentType
 import groovyx.net.http.HttpResponseDecorator
 import org.bson.types.ObjectId
 import com.taskroo.testing.RunJetty
+import org.joda.time.DateTime
 
 @RunJetty
 class TasksServiceSpec extends AcceptanceTestBase {
@@ -202,7 +203,7 @@ class TasksServiceSpec extends AcceptanceTestBase {
         response.status == 200
         and: "all task field should be updated in response"
         response.data.title == 'This task title has been updated'
-        response.data.closedDate == 1399411560000
+        response.data.closedDate > new DateTime().minusSeconds(10).getMillis()
         response.data.description == 'new description'
         response.data.dueDate == 1395273600000
         response.data.finished == true
@@ -212,7 +213,7 @@ class TasksServiceSpec extends AcceptanceTestBase {
         and: "all fields of task should be updated in DB"
         def taskDbObject = tasksCollection.findOne(new BasicDBObject([_id: new ObjectId(taskCreatedResponse.data.id)]))
         taskDbObject.get('title') == 'This task title has been updated'
-        taskDbObject.get('closed_date') == new Date(1399411560000)
+        taskDbObject.get('closed_date') > new DateTime().minusSeconds(10).toDate()
         taskDbObject.get('description') == 'new description'
         taskDbObject.get('due_date') == new Date(1395273600000)
         taskDbObject.get('finished') == true

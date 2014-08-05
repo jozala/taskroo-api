@@ -253,7 +253,6 @@ class TaskDaoTest extends DaoTestBase {
                 .addTag(new Tag('124', 'mariusz', 'tagB', 'black', true))
                 .setStartDate(DateMidnight.parse('2014-02-28').toDate())
                 .setDueDate(DateMidnight.parse('2014-03-14').toDate())
-                .setClosedDate(DateTime.parse('2014-05-12T11:31:41').toDate())
                 .setFinished(true)
                 .build()
         when:
@@ -266,7 +265,6 @@ class TaskDaoTest extends DaoTestBase {
         retrievedTask.description == 'updated description'
         retrievedTask.startDate == DateMidnight.parse('2014-02-28').toDate()
         retrievedTask.dueDate == DateMidnight.parse('2014-03-14').toDate()
-        retrievedTask.closedDate == DateTime.parse('2014-05-12T11:31:41').toDate()
         retrievedTask.finished
         retrievedTask.tags == [Tag.TagBuilder.start('mariusz', 'tagA').build(), Tag.TagBuilder.start('mariusz', 'tagB').build()] as Set
     }
@@ -596,6 +594,44 @@ class TaskDaoTest extends DaoTestBase {
         taskDaoWithMocks.update('mariusz', existingTask)
         then: "second DB call to update task status is not made"
         0 * tasksCollectionMock.update(_, new BasicDBObject('$set', new BasicDBObject('finished', existingTask.isFinished())), _, _);
+    }
+
+    def "should set closedDate when update request has changed task state to finished"() {
+        given: "unfinished task exists"
+        def task = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
+                .build()
+        task = taskDao.insert(task);
+        def finishedTask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle')
+                .setFinished(true)
+                .setId(task.id)
+                .build()
+        when: "update call to finish task"
+        def taskAfterUpdate = taskDao.update('mariusz', finishedTask)
+        then: "set closedDate to now"
+        taskAfterUpdate.closedDate > DateTime.now().minusSeconds(10).toDate()
+    }
+
+    def "should unset closedDate when update request has changed task state to unfinished"() {
+        given: "unfinished task exists"
+        def task = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle')
+                .setCreatedDate(DateTime.parse('2014-01-21T12:32:11').toDate())
+                .build()
+        task = taskDao.insert(task);
+        and: "update call to finish task"
+        def finishedTask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle')
+                .setFinished(true)
+                .setId(task.id)
+                .build()
+        taskDao.update('mariusz', finishedTask)
+        when: "update call to un-finish task"
+        def unfinishedTask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('taskTitle')
+                .setFinished(false)
+                .setId(task.id)
+                .build()
+        def taskAfterUpdate = taskDao.update('mariusz', unfinishedTask)
+        then:
+        taskAfterUpdate.closedDate == null
     }
 
     def "should return only unfinished tasks when specifying to find only unfinished"() {

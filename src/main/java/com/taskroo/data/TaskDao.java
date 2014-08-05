@@ -167,7 +167,6 @@ public class TaskDao {
                 .append(DESCRIPTION_KEY, task.getDescription())
                 .append(DUE_DATE_KEY, task.getDueDate())
                 .append(START_DATE_KEY, task.getStartDate())
-                .append(CLOSED_DATE_KEY, task.getClosedDate())
                 .append(TAGS_KEY, tagsIdsForTask)
                 .get();
 
@@ -192,13 +191,15 @@ public class TaskDao {
                 .is(ownerId).get();
         if (finished) {
             tasksCollection.update(findTaskWithSubtasksQuery(ownerId, taskId),
-                    new BasicDBObject("$set", new BasicDBObject(FINISHED_KEY, finished)), false, true);
+                    new BasicDBObject("$set", new BasicDBObject(FINISHED_KEY, true).append(CLOSED_DATE_KEY, new Date())),
+                    false, true);
         } else {
             DBObject taskPathDb = tasksCollection.findOne(findByIdAndOwnerIdQuery, new BasicDBObject(PATH_KEY, true));
             List<String> ancestorsIds = (List<String>) taskPathDb.get(PATH_KEY);
 
             tasksCollection.update(findTaskWithAncestorsQuery(ownerId, taskId, ancestorsIds),
-                    new BasicDBObject("$set", new BasicDBObject(FINISHED_KEY, finished)), false, true);
+                    new BasicDBObject("$set", new BasicDBObject(FINISHED_KEY, false).append(CLOSED_DATE_KEY, null)),
+                    false, true);
         }
     }
 
