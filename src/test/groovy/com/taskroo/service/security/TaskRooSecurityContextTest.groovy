@@ -9,7 +9,7 @@ import javax.ws.rs.core.Response
 
 class TaskRooSecurityContextTest extends Specification {
 
-    def "should throw exception with Forbidden response when session is not set"() {
+    def "should throw exception with Forbidden response when security token is not set"() {
         when:
         def sc = new TaskRooSecurityContext(null, Mock(User), "");
         sc.isUserInRole('user')
@@ -18,7 +18,7 @@ class TaskRooSecurityContextTest extends Specification {
         ex.response.status == Response.Status.FORBIDDEN.statusCode
     }
 
-    def "should return WWW-authenticate header with Forbidden response when session is not set"() {
+    def "should return WWW-authenticate header with Forbidden response when security token is not set"() {
         when:
         def sc = new TaskRooSecurityContext(null, Mock(User), "");
         sc.isUserInRole('user')
@@ -38,10 +38,10 @@ class TaskRooSecurityContextTest extends Specification {
 
     def "should check if user has given role"() {
         given:
-        def session = Mock(Session)
+        def securityToken = Mock(SecurityToken)
         def user = Mock(User)
         user.getRoles() >> userRoles
-        def sc = new TaskRooSecurityContext(session, user, "");
+        def sc = new TaskRooSecurityContext(securityToken, user, "");
         expect:
         userIsInRole == sc.isUserInRole(roleToCheck)
         where:

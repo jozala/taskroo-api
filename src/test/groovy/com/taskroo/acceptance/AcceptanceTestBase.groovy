@@ -14,7 +14,7 @@ abstract class AcceptanceTestBase extends Specification {
     private static final DB db = new MongoConnector('mongodb://localhost').getDatabase('taskroo')
     public static final DBCollection tagsCollection = db.getCollection('tags')
     public static final DBCollection tasksCollection = db.getCollection('tasks')
-    public static final DBCollection sessionCollection = db.getCollection("sessions")
+    public static final DBCollection securityTokensCollection = db.getCollection("securityTokens")
 
     public static final String TEST_USER_ID = 'userName'
 
@@ -24,17 +24,17 @@ abstract class AcceptanceTestBase extends Specification {
     }
 
     def cleanupSpec() {
-        sessionCollection.remove(QueryBuilder.start('user_id').is(TEST_USER_ID).get())
+        securityTokensCollection.remove(QueryBuilder.start('user_id').is(TEST_USER_ID).get())
         tasksCollection.remove(QueryBuilder.start('owner_id').is(TEST_USER_ID).get())
         tagsCollection.remove(QueryBuilder.start('_id.owner_id').is(TEST_USER_ID).get())
     }
 
 
-    protected String createSessionWithUser(String userId) {
-        def sessionId = UUID.randomUUID().toString()
-        sessionCollection.insert(new BasicDBObject(
-                [_id: sessionId, user_id: userId, roles: [1], create_time: new Date(), last_accessed_time: new Date()]))
-        return sessionId
+    protected String createSecurityTokenWithUser(String userId) {
+        def securityTokenId = UUID.randomUUID().toString()
+        securityTokensCollection.insert(new BasicDBObject(
+                [_id: securityTokenId, user_id: userId, roles: [1], create_time: new Date(), last_accessed_time: new Date()]))
+        return securityTokenId
     }
 
     protected String generateAuthorizationHeader(String tokenKey) {

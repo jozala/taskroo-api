@@ -116,7 +116,7 @@ public class TagDao {
         Objects.requireNonNull(tagToUpdate);
 
         if (!ownerId.equals(tagToUpdate.getOwnerId())) {
-            LOGGER.warn("Trying to update tag with different userId ({}) then found in session ({})", tagToUpdate.getOwnerId(), ownerId);
+            LOGGER.warn("Trying to update tag with different userId ({}) then found in security token ({})", tagToUpdate.getOwnerId(), ownerId);
             throw new IllegalArgumentException("OwnerId given is different than ownerId in the tag object");
         }
 

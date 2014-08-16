@@ -1,6 +1,6 @@
 package com.taskroo.service.security;
 
-import com.taskroo.data.SessionDao;
+import com.taskroo.data.SecurityTokenDao;
 import com.taskroo.domain.Role;
 import com.taskroo.domain.User;
 
@@ -21,18 +21,18 @@ import java.util.Set;
 @Provider
 public class SecurityContextFilter implements ContainerRequestFilter {
 
-    private final SessionDao sessionDao;
+    private final SecurityTokenDao securityTokenDao;
     private String authenticationServiceUrl;
 
     @Inject
-    public SecurityContextFilter(SessionDao sessionDao, @Named("authenticationServiceUrl") String authenticationServiceUrl) {
-        this.sessionDao = sessionDao;
+    public SecurityContextFilter(SecurityTokenDao securityTokenDao, @Named("authenticationServiceUrl") String authenticationServiceUrl) {
+        this.securityTokenDao = securityTokenDao;
         this.authenticationServiceUrl = authenticationServiceUrl;
     }
 
     @Override
     public void filter(ContainerRequestContext requestContext) throws IOException {
-        // Authorization: TaskRooAuth realm="taskroo@aetas.pl",tokenKey="=SessionIDString=",cnonce="uniqueValue"
+        // Authorization: TaskRooAuth realm="taskroo@aetas.pl",tokenKey="=SecurityTokenIDString=",cnonce="uniqueValue"
 
         String authorizationHeader = requestContext.getHeaderString("Authorization");
         if (authorizationHeader == null) {
@@ -44,19 +44,19 @@ public class SecurityContextFilter implements ContainerRequestFilter {
         String tokenKey = authHeaderMap.get("tokenKey");
 
         User user = null;
-        Session session = null;
+        SecurityToken securityToken = null;
 
         if (tokenKey != null && !tokenKey.isEmpty()) {
-            session = sessionDao.findOneAndUpdateLastAccessedTime(tokenKey);
+            securityToken = securityTokenDao.findOneAndUpdateLastAccessedTime(tokenKey);
 
-            if (null != session) {
+            if (null != securityToken) {
                 Set<Role> roles = new HashSet<>();
                 roles.add(Role.USER);
-                user = new User(session.getUserId(), roles);
+                user = new User(securityToken.getUserId(), roles);
             }
         }
 
-        requestContext.setSecurityContext(new TaskRooSecurityContext(session, user, authenticationServiceUrl));
+        requestContext.setSecurityContext(new TaskRooSecurityContext(securityToken, user, authenticationServiceUrl));
     }
 
     private Map<String, String> parseAuthorizationHeader(String authorizationHeader) {

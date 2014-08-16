@@ -10,12 +10,12 @@ import java.security.Principal;
 
 public class TaskRooSecurityContext implements SecurityContext {
 
-    private final Session session;
+    private final SecurityToken securityToken;
     private final User user;
     private final String authenticationServiceUrl;
 
-    public TaskRooSecurityContext(Session session, User user, String authenticationServiceUrl) {
-        this.session = session;
+    public TaskRooSecurityContext(SecurityToken securityToken, User user, String authenticationServiceUrl) {
+        this.securityToken = securityToken;
         this.user = user;
         this.authenticationServiceUrl = authenticationServiceUrl;
     }
@@ -27,7 +27,7 @@ public class TaskRooSecurityContext implements SecurityContext {
 
     @Override
     public boolean isUserInRole(String role) {
-        if (null == session) {
+        if (null == securityToken) {
             Response denied = Response.status(Response.Status.FORBIDDEN)
                     .header("WWW-Authenticate", "TaskRooAuth realm=\"taskroo@aetas.pl\",domain=\"" + authenticationServiceUrl + "\"")
                     .build();

@@ -22,8 +22,8 @@ http://www.springframework.org/schema/context/spring-context.xsd">
         <constructor-arg value="users" />
     </bean>
 
-    <bean name="sessionsCollection" factory-bean="collectionsFactory" factory-method="getCollection">
-        <constructor-arg value="sessions" />
+    <bean name="securityTokensCollection" factory-bean="collectionsFactory" factory-method="getCollection">
+        <constructor-arg value="securityTokens" />
     </bean>
 
     </beans>
