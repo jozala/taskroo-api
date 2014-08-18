@@ -6,7 +6,7 @@
     <groupId>com.taskroo</groupId>
     <artifactId>taskroo-api</artifactId>
     <packaging>war</packaging>
-    <version>0.4.0-SNAPSHOT</version>
+    <version>0.4.0</version>
     <name>taskroo-api</name>
 
     <properties>
