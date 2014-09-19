@@ -581,7 +581,7 @@ class TasksServiceSpec extends AcceptanceTestBase {
         def response = client.get([path: 'tasks', query: [finished: false], headers: ['Authorization': generateAuthorizationHeader(userASecurityId)]])
         then: "200 (OK) is returned is response"
         response.status == 200
-        and: "response body should contain all unfinished tasks od user A"
+        and: "response body should contain all unfinished tasks of user A"
         response.data.size() == 2
         response.data.every { it.finished == false }
         response.data.any { it.title == "taskTitle1" }
@@ -600,15 +600,35 @@ class TasksServiceSpec extends AcceptanceTestBase {
                 headers: ['Authorization': generateAuthorizationHeader(userASecurityId)])
         client.post(path: 'tasks', body: '{"title": "taskTitle4", "finished": true}', requestContentType: ContentType.JSON,
                 headers: ['Authorization': generateAuthorizationHeader(userASecurityId)])
-        when: "client sends GET request as user A to get all unfinished tasks"
+        when: "client sends GET request as user A to get all finished tasks"
         def response = client.get([path: 'tasks', query: [finished: true], headers: ['Authorization': generateAuthorizationHeader(userASecurityId)]])
         then: "200 (OK) is returned is response"
         response.status == 200
-        and: "response body should contain all unfinished tasks od user A"
+        and: "response body should contain all finished tasks of user A"
         response.data.size() == 3
         response.data.every { it.finished == true }
         response.data.any { it.title == 'taskTitle2' }
         response.data.any { it.title == 'taskTitle3' }
         response.data.any { it.title == 'taskTitle4' }
+    }
+
+    def "should return finished tasks as flat list"() {
+        given: "user A is authenticated"
+        def userASecurityId = createSecurityTokenWithUser(TEST_USER_ID)
+        and: "user has 1 finished task with subtask"
+        def parentResponse = client.post(path: 'tasks', body: '{"title": "parent", "finished": true}', requestContentType: ContentType.JSON,
+                headers: ['Authorization': generateAuthorizationHeader(userASecurityId)])
+        def child1Response = client.post(path: 'tasks', body: '{"title": "subtask", "finished": true}', requestContentType: ContentType.JSON,
+                headers: ['Authorization': generateAuthorizationHeader(userASecurityId)])
+        client.post(path: "tasks/${parentResponse.data.id}/subtasks/${child1Response.data.id}", headers: ['Authorization': generateAuthorizationHeader(userASecurityId)])
+        when: "client sends GET request as user A to get all finished tasks"
+        def response = client.get([path: 'tasks', query: [finished: true], headers: ['Authorization': generateAuthorizationHeader(userASecurityId)]])
+        then: "200 (OK) is returned is response"
+        response.status == 200
+        and: "response body should contain two finished tasks of user A"
+        response.data.size() == 2
+        response.data.every { it.finished == true }
+        response.data.any { it.id == parentResponse.data.id }
+        response.data.any { it.id == child1Response.data.id }
     }
 }

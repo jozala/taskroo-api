@@ -658,4 +658,17 @@ class TaskDaoTest extends DaoTestBase {
         tasks.size() == 1
         tasks.first().id == finishedTask3.id
     }
+
+    def "should return flat list of tasks when specifying to find only finished"() {
+        given: "customer has finished task with subtask"
+        def finishedTask1 = new Task.TaskBuilder().setOwnerId('mariusz').setTitle("taskTitle_1").setCreatedDate(new Date()).setFinished(true).build()
+        def subTask1 = new Task.TaskBuilder().setOwnerId('mariusz').setTitle("subtaskTitle_1").setCreatedDate(new Date()).setFinished(true).build()
+        [finishedTask1, subTask1].each { taskDao.insert(it) }
+        taskDao.addSubtask('mariusz', finishedTask1.getId(), subTask1.getId())
+        when: "specifying to find only unfinished tasks"
+        def tasks = taskDao.findAllByOwnerIdAndFinished('mariusz', true)
+        then: "flat list of all finished tasks should be returned"
+        tasks.size() == 2
+        tasks.collect {it.id}.containsAll([subTask1.id, finishedTask1.id])
+    }
 }

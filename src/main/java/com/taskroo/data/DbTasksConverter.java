@@ -1,9 +1,9 @@
 package com.taskroo.data;
 
 import com.mongodb.DBObject;
-import org.springframework.stereotype.Component;
 import com.taskroo.domain.Tag;
 import com.taskroo.domain.Task;
+import org.springframework.stereotype.Component;
 
 import java.util.*;
 
@@ -64,6 +64,15 @@ public class DbTasksConverter {
         List<String> path = (List<String>) dbTask.get(PATH_KEY);
         return path.isEmpty() ||
                 (buildingPartOfATree && !alreadyReadTasks.containsKey(path.get(path.size() - 1)));
+    }
+
+    public Collection<Task> convertToFlatTasksList(List<DBObject> dbTasksObjects, List<Tag> allUserTags) {
+        Map<String, Tag> tagsMap = convertTagsToTagsMap(allUserTags);
+        Collection<Task> tasks = new ArrayList<>(dbTasksObjects.size());
+        for (DBObject dbTask : dbTasksObjects) {
+            tasks.add(convertSingleDbObjectToTask(dbTask, tagsMap));
+        }
+        return tasks;
     }
 
     public Task convertSingleDbObjectToTask(DBObject dbTask, Map<String, Tag> tagsMap) {

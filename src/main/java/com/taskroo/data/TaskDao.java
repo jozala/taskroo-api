@@ -50,7 +50,7 @@ public class TaskDao {
             throw new UnsupportedDataOperationException("Trying to insert task without ownerId set");
         }
         if (task.getParentTask() != null) {
-            LOGGER.error("Trying to insert task with subtask what is unsupported.");
+            LOGGER.error("Trying to insert task with parent task. This is unsupported.");
             throw new UnsupportedDataOperationException("Cannot insert task with parent task set. Insert top level task and move it to subtask instead.");
         }
 
@@ -138,7 +138,11 @@ public class TaskDao {
         DBObject queryByOwnerAndFinished = QueryBuilder.start(OWNER_ID_KEY).is(ownerId).and(FINISHED_KEY).is(finished).get();
         DBCursor dbTasks = tasksCollection.find(queryByOwnerAndFinished);
         List<Tag> allUserTags = tagDao.getAllTagsByOwnerId(ownerId);
-        return dbTasksConverter.convertToTasksTree(dbTasks.toArray(), allUserTags, true);
+        if (finished) {
+            return dbTasksConverter.convertToFlatTasksList(dbTasks.toArray(), allUserTags);
+        } else {
+            return dbTasksConverter.convertToTasksTree(dbTasks.toArray(), allUserTags, true);
+        }
     }
 
     public void remove(String ownerId, String taskId) throws NonExistingResourceOperationException {
