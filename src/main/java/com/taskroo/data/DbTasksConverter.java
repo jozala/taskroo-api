@@ -12,7 +12,7 @@ import static com.taskroo.data.TaskDao.*;
 @Component
 public class DbTasksConverter {
 
-    public Collection<Task> convertToTasksTree(List<DBObject> dbTasksObjects, List<Tag> allUserTags, boolean buildingPartOfATree) {
+    public List<Task> convertToTasksTree(List<DBObject> dbTasksObjects, List<Tag> allUserTags, boolean buildingPartOfATree) {
         Map<String, Tag> tagsMap = convertTagsToTagsMap(allUserTags);
         List<Task> topLevelTasks = new LinkedList<>();
         Map<String, Task> allTasksMap = new LinkedHashMap<>();
@@ -66,9 +66,9 @@ public class DbTasksConverter {
                 (buildingPartOfATree && !alreadyReadTasks.containsKey(path.get(path.size() - 1)));
     }
 
-    public Collection<Task> convertToFlatTasksList(List<DBObject> dbTasksObjects, List<Tag> allUserTags) {
+    public List<Task> convertToFlatTasksList(List<DBObject> dbTasksObjects, List<Tag> allUserTags) {
         Map<String, Tag> tagsMap = convertTagsToTagsMap(allUserTags);
-        Collection<Task> tasks = new ArrayList<>(dbTasksObjects.size());
+        List<Task> tasks = new ArrayList<>(dbTasksObjects.size());
         for (DBObject dbTask : dbTasksObjects) {
             tasks.add(convertSingleDbObjectToTask(dbTask, tagsMap));
         }

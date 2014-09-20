@@ -136,7 +136,7 @@ public class TaskDao {
 
     public Collection<Task> findAllByOwnerIdAndFinished(String ownerId, boolean finished) {
         DBObject queryByOwnerAndFinished = QueryBuilder.start(OWNER_ID_KEY).is(ownerId).and(FINISHED_KEY).is(finished).get();
-        DBCursor dbTasks = tasksCollection.find(queryByOwnerAndFinished);
+        DBCursor dbTasks = tasksCollection.find(queryByOwnerAndFinished).sort(new BasicDBObject(CLOSED_DATE_KEY, -1));
         List<Tag> allUserTags = tagDao.getAllTagsByOwnerId(ownerId);
         if (finished) {
             return dbTasksConverter.convertToFlatTasksList(dbTasks.toArray(), allUserTags);
