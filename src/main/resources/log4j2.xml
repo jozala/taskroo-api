@@ -4,14 +4,14 @@
 		<Console name="Console" target="SYSTEM_OUT">
 			<PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n" />
 		</Console>
-		<File name="File" fileName="target/taskroo.log">
+		<File name="File" fileName="log/taskroo-api.log">
 			<PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n" />
 		</File>
 	</appenders>
 	<loggers>
-		<logger name="com.taskroo" level="info" />
-		<root level="info">
-			<appender-ref ref="Console" />
+		<logger name="com.taskroo" level="warn" />
+		<root level="warn">
+			<appender-ref ref="File" />
 		</root>
 	</loggers>
 </configuration>
