@@ -683,4 +683,19 @@ class TaskDaoTest extends DaoTestBase {
         then: "finished tasks should be returned ordered by closed date descending"
         tasks.collect {it.title} == ['newest', 'middle', 'oldest']
     }
+
+    def "should not change closed date of already finished subtasks when finishing parent task"() {
+        given: "customer has task with finished subtask"
+        def parentTask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle("parent").setCreatedDate(new Date()).build()
+        def subtaskClosedDate = DateTime.now().minusDays(3).toDate()
+        def subtask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle("child").setCreatedDate(new Date()).setFinished(true).setClosedDate(subtaskClosedDate).build()
+        [parentTask, subtask].each { taskDao.insert(it) }
+        taskDao.addSubtask('mariusz', parentTask.id, subtask.id)
+        when: "customer request to change status of the parent task to finished"
+        def finishedParentTask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle('parent').setFinished(true).setId(parentTask.id).build()
+        taskDao.update('mariusz', finishedParentTask);
+        then: "subtask's closed date should not change"
+        def subtaskAfterUpdate = taskDao.findAllByOwnerId('mariusz').first().subtasks.first()
+        subtaskAfterUpdate.closedDate == subtaskClosedDate
+    }
 }

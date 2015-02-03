@@ -194,7 +194,7 @@ public class TaskDao {
         DBObject findByIdAndOwnerIdQuery = QueryBuilder.start(ID_KEY).is(new ObjectId(taskId)).and(TaskDao.OWNER_ID_KEY)
                 .is(ownerId).get();
         if (finished) {
-            tasksCollection.update(findTaskWithSubtasksQuery(ownerId, taskId),
+            tasksCollection.update(findTaskWithUnfinishedSubtasksQuery(ownerId, taskId),
                     new BasicDBObject("$set", new BasicDBObject(FINISHED_KEY, true).append(CLOSED_DATE_KEY, new Date())),
                     false, true);
         } else {
@@ -205,6 +205,12 @@ public class TaskDao {
                     new BasicDBObject("$set", new BasicDBObject(FINISHED_KEY, false).append(CLOSED_DATE_KEY, null)),
                     false, true);
         }
+    }
+
+    private DBObject findTaskWithUnfinishedSubtasksQuery(String ownerId, String taskId) {
+        DBObject findSubtaskByIdAndOwnerIdQuery = QueryBuilder.start(ID_KEY).is(new ObjectId(taskId)).and(TaskDao.OWNER_ID_KEY).is(ownerId).get();
+        DBObject findSubtasksOfSubtaskQuery = QueryBuilder.start(PATH_KEY).is(taskId).and(FINISHED_KEY).is(false).get();
+        return QueryBuilder.start().or(findSubtaskByIdAndOwnerIdQuery, findSubtasksOfSubtaskQuery).get();
     }
 
     private DBObject findTaskWithAncestorsQuery(String ownerId, String id, List<String> ancestorsIds) {
