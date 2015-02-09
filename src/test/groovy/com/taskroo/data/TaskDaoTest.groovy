@@ -641,47 +641,9 @@ class TaskDaoTest extends DaoTestBase {
         def finishedTask3 = new Task.TaskBuilder().setOwnerId('mariusz').setTitle("taskTitle_3").setCreatedDate(new Date()).setFinished(true).build()
         [unfinishedTask1, unfinishedTask2, finishedTask3].each { taskDao.insert(it) }
         when: "specifying to find only unfinished tasks"
-        def tasks = taskDao.findAllByOwnerIdAndFinished('mariusz', false)
+        def tasks = taskDao.findUnfinishedByOwnerId('mariusz')
         then: "list of all unfinished tasks should be returned"
         tasks.collect { it.id }.toSet() == [unfinishedTask1, unfinishedTask2].collect { it.id }.toSet()
-    }
-
-    def "should return only finished tasks when specifying to find only finished"() {
-        given: "customer has 2 unfinished tasks and 1 finished task"
-        def unfinishedTask1 = new Task.TaskBuilder().setOwnerId('mariusz').setTitle("taskTitle_1").setCreatedDate(new Date()).build()
-        def unfinishedTask2 = new Task.TaskBuilder().setOwnerId('mariusz').setTitle("taskTitle_2").setCreatedDate(new Date()).build()
-        def finishedTask3 = new Task.TaskBuilder().setOwnerId('mariusz').setTitle("taskTitle_3").setCreatedDate(new Date()).setFinished(true).build()
-        [unfinishedTask1, unfinishedTask2, finishedTask3].each { taskDao.insert(it) }
-        when: "specifying to find only finished tasks"
-        def tasks = taskDao.findAllByOwnerIdAndFinished('mariusz', true)
-        then: "list of all finished tasks should be returned"
-        tasks.size() == 1
-        tasks.first().id == finishedTask3.id
-    }
-
-    def "should return flat list of tasks when specifying to find only finished"() {
-        given: "customer has finished task with subtask"
-        def finishedTask1 = new Task.TaskBuilder().setOwnerId('mariusz').setTitle("taskTitle_1").setCreatedDate(new Date()).setFinished(true).build()
-        def subTask1 = new Task.TaskBuilder().setOwnerId('mariusz').setTitle("subtaskTitle_1").setCreatedDate(new Date()).setFinished(true).build()
-        [finishedTask1, subTask1].each { taskDao.insert(it) }
-        taskDao.addSubtask('mariusz', finishedTask1.getId(), subTask1.getId())
-        when: "specifying to find only finished tasks"
-        def tasks = taskDao.findAllByOwnerIdAndFinished('mariusz', true)
-        then: "flat list of all finished tasks should be returned"
-        tasks.size() == 2
-        tasks.collect {it.id}.containsAll([subTask1.id, finishedTask1.id])
-    }
-
-    def "should order finished tasks by closed date when getting only finished tasks"() {
-        given: "customer has three finished tasks"
-        def finishedTask1 = new Task.TaskBuilder().setOwnerId('mariusz').setTitle("oldest").setCreatedDate(new Date()).setFinished(true).setClosedDate(DateTime.now().minusDays(3).toDate()).build()
-        def finishedTask2 = new Task.TaskBuilder().setOwnerId('mariusz').setTitle("newest").setCreatedDate(new Date()).setFinished(true).setClosedDate(DateTime.now().minusDays(1).toDate()).build()
-        def finishedTask3 = new Task.TaskBuilder().setOwnerId('mariusz').setTitle("middle").setCreatedDate(new Date()).setFinished(true).setClosedDate(DateTime.now().minusDays(2).toDate()).build()
-        [finishedTask1, finishedTask2, finishedTask3].each { taskDao.insert(it) }
-        when: "specifying to find only finished tasks"
-        def tasks = taskDao.findAllByOwnerIdAndFinished('mariusz', true)
-        then: "finished tasks should be returned ordered by closed date descending"
-        tasks.collect {it.title} == ['newest', 'middle', 'oldest']
     }
 
     def "should not change closed date of already finished subtasks when finishing parent task"() {
@@ -737,5 +699,43 @@ class TaskDaoTest extends DaoTestBase {
         then: "only 2 finished tasks should be returned with closed date before (or same as) given range"
         tasks.size() == 2
         tasks*.id.containsAll(earlierTask.id, exactlyAtEndTask.id)
+    }
+
+    def "should return all finished tasks when specifying to find finished only without any date constraints"() {
+        given: "customer has 2 unfinished tasks and 1 finished task"
+        def unfinishedTask1 = new Task.TaskBuilder().setOwnerId('mariusz').setTitle("taskTitle_1").setCreatedDate(new Date()).build()
+        def unfinishedTask2 = new Task.TaskBuilder().setOwnerId('mariusz').setTitle("taskTitle_2").setCreatedDate(new Date()).build()
+        def finishedTask3 = new Task.TaskBuilder().setOwnerId('mariusz').setTitle("taskTitle_3").setCreatedDate(new Date()).setFinished(true).build()
+        [unfinishedTask1, unfinishedTask2, finishedTask3].each { taskDao.insert(it) }
+        when: "specifying to find only finished tasks"
+        def tasks = taskDao.findFinishedByOwnerAndClosedBetween('mariusz', null, null)
+        then: "list of all finished tasks should be returned"
+        tasks.size() == 1
+        tasks.first().id == finishedTask3.id
+    }
+
+    def "should return flat list of tasks when specifying to find only finished"() {
+        given: "customer has finished task with subtask"
+        def finishedTask1 = new Task.TaskBuilder().setOwnerId('mariusz').setTitle("taskTitle_1").setCreatedDate(new Date()).setFinished(true).build()
+        def subTask1 = new Task.TaskBuilder().setOwnerId('mariusz').setTitle("subtaskTitle_1").setCreatedDate(new Date()).setFinished(true).build()
+        [finishedTask1, subTask1].each { taskDao.insert(it) }
+        taskDao.addSubtask('mariusz', finishedTask1.getId(), subTask1.getId())
+        when: "specifying to find only finished tasks"
+        def tasks = taskDao.findFinishedByOwnerAndClosedBetween('mariusz', null, null)
+        then: "flat list of all finished tasks should be returned"
+        tasks.size() == 2
+        tasks.collect {it.id}.containsAll([subTask1.id, finishedTask1.id])
+    }
+
+    def "should order finished tasks by closed date when getting only finished tasks"() {
+        given: "customer has three finished tasks"
+        def finishedTask1 = new Task.TaskBuilder().setOwnerId('mariusz').setTitle("oldest").setCreatedDate(new Date()).setFinished(true).setClosedDate(DateTime.now().minusDays(3).toDate()).build()
+        def finishedTask2 = new Task.TaskBuilder().setOwnerId('mariusz').setTitle("newest").setCreatedDate(new Date()).setFinished(true).setClosedDate(DateTime.now().minusDays(1).toDate()).build()
+        def finishedTask3 = new Task.TaskBuilder().setOwnerId('mariusz').setTitle("middle").setCreatedDate(new Date()).setFinished(true).setClosedDate(DateTime.now().minusDays(2).toDate()).build()
+        [finishedTask1, finishedTask2, finishedTask3].each { taskDao.insert(it) }
+        when: "specifying to find only finished tasks"
+        def tasks = taskDao.findFinishedByOwnerAndClosedBetween('mariusz', null, null)
+        then: "finished tasks should be returned ordered by closed date descending"
+        tasks.collect {it.title} == ['newest', 'middle', 'oldest']
     }
 }

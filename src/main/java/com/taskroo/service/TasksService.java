@@ -40,7 +40,6 @@ public class TasksService {
     }
 
 
-    // TODO change retrieving finished tasks to be using new DAO method for finished tasks in range
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(value = "Get all tasks", responseContainer = "List", response=Task.class)
@@ -55,7 +54,7 @@ public class TasksService {
         if (finished == null) {
             tasks = taskDao.findAllByOwnerId(ownerId);
         } else if (!finished) {
-            tasks = taskDao.findAllByOwnerIdAndFinished(ownerId, false);
+            tasks = taskDao.findUnfinishedByOwnerId(ownerId);
         } else {
             tasks = taskDao.findFinishedByOwnerAndClosedBetween(ownerId, closedDateAfter, null);
         }
