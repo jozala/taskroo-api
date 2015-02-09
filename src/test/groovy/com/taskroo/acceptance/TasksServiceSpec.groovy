@@ -632,22 +632,24 @@ class TasksServiceSpec extends AcceptanceTestBase {
         response.data.any { it.id == child1Response.data.id }
     }
 
-    def "should return only finished tasks after specified time"() {
+    def "should return only finished tasks between specified dates"() {
         given: "user A is authenticated"
         def userASecurityId = createSecurityTokenWithUser(TEST_USER_ID)
-        and: "user has 3 tasks finished after(including) 20th January and 1 task finished earlier"
+        and: "user has 2 tasks finished in range, 1 task finished earlier and one task after given range"
         client.post(path: 'tasks', body: '{"title": "taskTitle1", "finished": true, "closedDate": 1421708400000}', requestContentType: ContentType.JSON,
                 headers: ['Authorization': generateAuthorizationHeader(userASecurityId)])
-        client.post(path: 'tasks', body: '{"title": "taskTitle2", "finished": true, "closedDate": 1421764200000}', requestContentType: ContentType.JSON,
+        client.post(path: 'tasks', body: '{"title": "taskTitle2", "finished": true, "closedDate": 1422572400000}', requestContentType: ContentType.JSON,
                 headers: ['Authorization': generateAuthorizationHeader(userASecurityId)])
-        client.post(path: 'tasks', body: '{"title": "taskTitle3", "finished": true, "closedDate": 1421850600000}', requestContentType: ContentType.JSON,
+        client.post(path: 'tasks', body: '{"title": "taskTitle3", "finished": true, "closedDate": 1421708300000}', requestContentType: ContentType.JSON,
                 headers: ['Authorization': generateAuthorizationHeader(userASecurityId)])
-        client.post(path: 'tasks', body: '{"title": "taskTitle4", "finished": true, "closedDate": 1421708340000}', requestContentType: ContentType.JSON,
+        client.post(path: 'tasks', body: '{"title": "taskTitle4", "finished": true, "closedDate": 1422573400000}', requestContentType: ContentType.JSON,
                 headers: ['Authorization': generateAuthorizationHeader(userASecurityId)])
-        when: "client sends GET request as user A to get finished tasks, closed after 20th January"
-        def response = client.get([path: 'tasks', query: [finished: true, closedDateAfter: 1421708400000], headers: ['Authorization': generateAuthorizationHeader(userASecurityId)]])
-        then: "response body should contain three finished tasks, closed after (including) 20th January"
-        response.data.size() == 3
-        response.data*.closedDate.containsAll(new DateTime(2015, 1, 20, 0,0).millis, new DateTime(2015, 1, 20, 15,30).millis, new DateTime(2015, 1, 21, 15, 30).millis)
+        when: "client sends GET request as user A to get finished tasks, closed after 20th January and before 30th January 2015"
+
+        def response = client.get([path: 'tasks', query: [finished: true, closedDateAfter: '2015-01-20T00:00', closedDateBefore: '2015-01-30T00:00'],
+                                   headers: ['Authorization': generateAuthorizationHeader(userASecurityId)]])
+        then: "response body should contain two finished tasks with closed date in range"
+        response.data.size() == 2
+        response.data*.closedDate.containsAll(new DateTime(2015, 1, 20, 0,0).millis, new DateTime(2015, 1, 30, 0, 0).millis)
     }
 }

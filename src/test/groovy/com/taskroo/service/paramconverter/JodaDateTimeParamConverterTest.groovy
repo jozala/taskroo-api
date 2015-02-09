@@ -1,6 +1,6 @@
 package com.taskroo.service.paramconverter
-
 import org.joda.time.DateTime
+import org.joda.time.format.ISODateTimeFormat
 import spock.lang.Specification
 
 class JodaDateTimeParamConverterTest extends Specification {
@@ -12,21 +12,21 @@ class JodaDateTimeParamConverterTest extends Specification {
 
     }
 
-    def "convert milliseconds timestamp string to DateTime object"() {
+    def "convert ISO date time string to DateTime object"() {
         given:
-        def stringTimestamp = '1421708400000'
+        def isoStringDate = '2015-01-15T12:34'
         when:
-        DateTime dateTime = converter.fromString(stringTimestamp)
+        DateTime dateTime = converter.fromString(isoStringDate)
         then:
-        dateTime.millis == stringTimestamp.toLong()
+        dateTime.isEqual(DateTime.parse(isoStringDate, ISODateTimeFormat.dateTimeParser()))
     }
 
-    def "convert DateTime object to milliseconds timestamp string"() {
+    def "convert DateTime object to ISO date time string"() {
         given:
-        def dateTime = new DateTime('1421708400000'.toLong())
+        def dateTime = DateTime.parse('2015-01-13T01:22')
         when:
-        def dateTimestamp = converter.toString(dateTime)
+        def dateIsoString = converter.toString(dateTime)
         then:
-        dateTimestamp == '1421708400000'
+        dateIsoString.startsWith('2015-01-13T01:22:00')
     }
 }

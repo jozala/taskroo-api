@@ -13,12 +13,12 @@ public class JodaDateTimeParamConverter implements ParamConverter<DateTime>, Par
 
     @Override
     public DateTime fromString(String value) {
-        return new DateTime(Long.parseLong(value));
+        return DateTime.parse(value);
     }
 
     @Override
     public String toString(DateTime value) {
-        return Long.toString(value.getMillis());
+        return value.toString();
     }
 
     @Override
