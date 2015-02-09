@@ -9,6 +9,7 @@ import com.taskroo.domain.Task;
 import com.wordnik.swagger.annotations.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.joda.time.DateTime;
 
 import javax.annotation.security.RolesAllowed;
 import javax.inject.Inject;
@@ -38,6 +39,8 @@ public class TasksService {
         this.taskDao = taskDao;
     }
 
+
+    // TODO change retrieving finished tasks to be using new DAO method for finished tasks in range
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(value = "Get all tasks", responseContainer = "List", response=Task.class)
@@ -45,13 +48,16 @@ public class TasksService {
             @ApiResponse(code = 200, message = "Correct response"),
             @ApiResponse(code = 403, message = "Access forbidden")})
     public Response getAll(@Context SecurityContext sc,
-                           @ApiParam(value = "Specify if you want to filter by finished") @QueryParam("finished") Boolean finished) {
+                           @ApiParam(value = "Specify if you want to filter by finished") @QueryParam("finished") Boolean finished,
+                           @QueryParam("closedDateAfter") DateTime closedDateAfter) {
         Collection<Task> tasks;
         String ownerId = sc.getUserPrincipal().getName();
         if (finished == null) {
             tasks = taskDao.findAllByOwnerId(ownerId);
+        } else if (!finished) {
+            tasks = taskDao.findAllByOwnerIdAndFinished(ownerId, false);
         } else {
-            tasks = taskDao.findAllByOwnerIdAndFinished(ownerId, finished);
+            tasks = taskDao.findFinishedByOwnerAndClosedBetween(ownerId, closedDateAfter, null);
         }
         return Response.ok(tasks).build();
     }

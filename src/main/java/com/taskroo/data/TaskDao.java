@@ -1,12 +1,13 @@
 package com.taskroo.data;
 
 import com.mongodb.*;
+import com.taskroo.domain.Tag;
+import com.taskroo.domain.Task;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.bson.types.ObjectId;
+import org.joda.time.DateTime;
 import org.springframework.stereotype.Repository;
-import com.taskroo.domain.Tag;
-import com.taskroo.domain.Task;
 
 import javax.inject.Inject;
 import java.util.*;
@@ -324,5 +325,25 @@ public class TaskDao {
     public Task moveToTopLevel(String ownerId, String taskId) throws NonExistingResourceOperationException {
         moveTaskWithSubtasksToTopLevel(ownerId, taskId);
         return getTask(ownerId, taskId);
+    }
+
+
+    public Collection<Task> findFinishedByOwnerAndClosedBetween(String ownerId, DateTime startRange, DateTime endRange) {
+        QueryBuilder queryByOwnerAndFinishedAndClosedBetweenBuilder = QueryBuilder
+                .start(OWNER_ID_KEY).is(ownerId)
+                .and(FINISHED_KEY).is(true);
+
+        if (startRange != null) {
+            queryByOwnerAndFinishedAndClosedBetweenBuilder.and(CLOSED_DATE_KEY).greaterThanEquals(startRange.toDate());
+        }
+        if (endRange != null) {
+            queryByOwnerAndFinishedAndClosedBetweenBuilder.and(CLOSED_DATE_KEY).lessThanEquals(endRange.toDate());
+        }
+
+        DBObject queryByOwnerAndFinishedAndClosedBetween = queryByOwnerAndFinishedAndClosedBetweenBuilder.get();
+        DBCursor dbTasks = tasksCollection.find(queryByOwnerAndFinishedAndClosedBetween).sort(new BasicDBObject(CLOSED_DATE_KEY, -1));
+        List<Tag> allUserTags = tagDao.getAllTagsByOwnerId(ownerId);
+
+        return dbTasksConverter.convertToFlatTasksList(dbTasks.toArray(), allUserTags);
     }
 }

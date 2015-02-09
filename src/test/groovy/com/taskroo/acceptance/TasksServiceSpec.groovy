@@ -631,4 +631,23 @@ class TasksServiceSpec extends AcceptanceTestBase {
         response.data.any { it.id == parentResponse.data.id }
         response.data.any { it.id == child1Response.data.id }
     }
+
+    def "should return only finished tasks after specified time"() {
+        given: "user A is authenticated"
+        def userASecurityId = createSecurityTokenWithUser(TEST_USER_ID)
+        and: "user has 3 tasks finished after(including) 20th January and 1 task finished earlier"
+        client.post(path: 'tasks', body: '{"title": "taskTitle1", "finished": true, "closedDate": 1421708400000}', requestContentType: ContentType.JSON,
+                headers: ['Authorization': generateAuthorizationHeader(userASecurityId)])
+        client.post(path: 'tasks', body: '{"title": "taskTitle2", "finished": true, "closedDate": 1421764200000}', requestContentType: ContentType.JSON,
+                headers: ['Authorization': generateAuthorizationHeader(userASecurityId)])
+        client.post(path: 'tasks', body: '{"title": "taskTitle3", "finished": true, "closedDate": 1421850600000}', requestContentType: ContentType.JSON,
+                headers: ['Authorization': generateAuthorizationHeader(userASecurityId)])
+        client.post(path: 'tasks', body: '{"title": "taskTitle4", "finished": true, "closedDate": 1421708340000}', requestContentType: ContentType.JSON,
+                headers: ['Authorization': generateAuthorizationHeader(userASecurityId)])
+        when: "client sends GET request as user A to get finished tasks, closed after 20th January"
+        def response = client.get([path: 'tasks', query: [finished: true, closedDateAfter: 1421708400000], headers: ['Authorization': generateAuthorizationHeader(userASecurityId)]])
+        then: "response body should contain three finished tasks, closed after (including) 20th January"
+        response.data.size() == 3
+        response.data*.closedDate.containsAll(new DateTime(2015, 1, 20, 0,0).millis, new DateTime(2015, 1, 20, 15,30).millis, new DateTime(2015, 1, 21, 15, 30).millis)
+    }
 }

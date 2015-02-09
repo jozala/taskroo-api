@@ -698,4 +698,44 @@ class TaskDaoTest extends DaoTestBase {
         def subtaskAfterUpdate = taskDao.findAllByOwnerId('mariusz').first().subtasks.first()
         subtaskAfterUpdate.closedDate == subtaskClosedDate
     }
+
+    def "should return finished tasks with the closed date within given date-time range"() {
+        given: "customer has 4 finished tasks with different closed date"
+        def exactlyAtStartTask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle("oldest").setCreatedDate(new Date()).setFinished(true).setClosedDate(DateTime.parse('2014-12-01T12:00').toDate()).build()
+        def exactlyAtEndTask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle("newest").setCreatedDate(new Date()).setFinished(true).setClosedDate(DateTime.parse('2014-12-20T13:00').toDate()).build()
+        def afterRangeTask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle("middle").setCreatedDate(new Date()).setFinished(true).setClosedDate(DateTime.parse('2014-12-20T13:01').toDate()).build()
+        def beforeRangeTask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle("middle").setCreatedDate(new Date()).setFinished(true).setClosedDate(DateTime.parse('2014-12-01T11:59').toDate()).build()
+        [exactlyAtStartTask, exactlyAtEndTask, afterRangeTask, beforeRangeTask].each { taskDao.insert(it) }
+        when: "customer requests to retrieve finished tasks, closed after 1st of December at 12 o'clock and before 20th December at 1pm"
+        def tasks = taskDao.findFinishedByOwnerAndClosedBetween('mariusz', DateTime.parse('2014-12-01T12:00'), DateTime.parse('2014-12-20T13:00'))
+        then: "only 2 finished tasks should be returned with closed date in the given range"
+        tasks.size() == 2
+        tasks*.id.containsAll(exactlyAtStartTask.id, exactlyAtEndTask.id)
+    }
+
+    def "should return finished tasks with closed date after given datetime when no end range date given"() {
+        given: "customer has 3 finished tasks with different closed date"
+        def exactlyAtStartTask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle("oldest").setCreatedDate(new Date()).setFinished(true).setClosedDate(DateTime.parse('2014-12-01T12:00').toDate()).build()
+        def laterTask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle("middle").setCreatedDate(new Date()).setFinished(true).setClosedDate(DateTime.parse('2014-12-20T13:01').toDate()).build()
+        def beforeRangeTask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle("middle").setCreatedDate(new Date()).setFinished(true).setClosedDate(DateTime.parse('2014-12-01T11:59').toDate()).build()
+        [exactlyAtStartTask, laterTask, beforeRangeTask].each { taskDao.insert(it) }
+        when: "customer requests to retrieve finished tasks, closed after 1st of December at 12 o'clock"
+        def tasks = taskDao.findFinishedByOwnerAndClosedBetween('mariusz', DateTime.parse('2014-12-01T12:00'), null)
+        then: "only 2 finished tasks should be returned with closed date after (or same as) given date"
+        tasks.size() == 2
+        tasks*.id.containsAll(exactlyAtStartTask.id, laterTask.id)
+    }
+
+    def "should return finished tasks with closed date before given datetime when no start range date given"() {
+        given: "customer has 3 finished tasks with different closed date"
+        def exactlyAtEndTask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle("newest").setCreatedDate(new Date()).setFinished(true).setClosedDate(DateTime.parse('2014-12-20T13:00').toDate()).build()
+        def afterRangeTask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle("middle").setCreatedDate(new Date()).setFinished(true).setClosedDate(DateTime.parse('2014-12-20T13:01').toDate()).build()
+        def earlierTask = new Task.TaskBuilder().setOwnerId('mariusz').setTitle("middle").setCreatedDate(new Date()).setFinished(true).setClosedDate(DateTime.parse('2014-12-01T11:59').toDate()).build()
+        [exactlyAtEndTask, afterRangeTask, earlierTask].each { taskDao.insert(it) }
+        when: "customer requests to retrieve finished tasks, closed before 20th December at 1pm"
+        def tasks = taskDao.findFinishedByOwnerAndClosedBetween('mariusz', null, DateTime.parse('2014-12-20T13:00'))
+        then: "only 2 finished tasks should be returned with closed date before (or same as) given range"
+        tasks.size() == 2
+        tasks*.id.containsAll(earlierTask.id, exactlyAtEndTask.id)
+    }
 }
