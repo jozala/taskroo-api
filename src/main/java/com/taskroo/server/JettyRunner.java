@@ -18,11 +18,11 @@ public class JettyRunner {
     private static Server server;
 
     public static void main(String[] args) {
-        startIfNotRunning("http://localhost/", 8080);
+        startIfNotRunning("localhost", 8080);
     }
 
     public static void startIfNotRunning(String hostname, int port) {
-        if (isJettyRunningOnPort(port)) {
+        if (isJettyRunningOn(hostname, port)) {
             LOGGER.info("Jetty is already running on port {}", port);
             return;
         }
@@ -38,9 +38,9 @@ public class JettyRunner {
         }
     }
 
-    private static boolean isJettyRunningOnPort(int port) {
+    private static boolean isJettyRunningOn(String hostname, int port) {
         try{
-            new Socket("localhost", port);
+            new Socket(hostname, port);
         }
         catch(IOException e) {
             return false;

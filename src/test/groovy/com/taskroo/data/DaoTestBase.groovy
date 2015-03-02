@@ -6,7 +6,7 @@ import spock.lang.Specification
 
 class DaoTestBase extends Specification {
 
-    private static final DB db = new MongoConnector('mongodb://localhost').getDatabase('taskroo-dao-tests-db')
+    private static final DB db = new MongoConnector('localhost', '27017').getDatabase('taskroo-dao-tests-db')
     public static final DBCollection tagsCollection = db.getCollection('tags')
     public static final DBCollection tasksCollection = db.getCollection('tasks')
     public static final DBCollection securityTokensCollection = db.getCollection('securityTokens')
