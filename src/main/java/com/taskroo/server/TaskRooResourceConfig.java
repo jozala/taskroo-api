@@ -11,6 +11,7 @@ public class TaskRooResourceConfig extends ResourceConfig {
     public TaskRooResourceConfig() {
         register(ExceptionListener.class);
         register(RolesAllowedDynamicFeature.class);
+        register(CORSResponseFilter.class);
         property(ServerProperties.BV_SEND_ERROR_IN_RESPONSE, true);
         packages("com.taskroo.service", "com.wordnik.swagger.jersey.listing");
     }
