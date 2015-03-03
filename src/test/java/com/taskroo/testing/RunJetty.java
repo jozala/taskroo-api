@@ -13,5 +13,5 @@ public @interface RunJetty {
 
     public abstract int port() default 8080;
 
-    public abstract String host() default "http://localhost/";
+    public abstract String host() default "localhost";
 }

@@ -26,8 +26,8 @@ public class JettyRunner {
             LOGGER.info("Jetty is already running on port {}", port);
             return;
         }
-        LOGGER.info("Starting Jetty on port {}", port);
-        URI baseUri = UriBuilder.fromUri(hostname).port(port).build();
+        LOGGER.info("Starting Jetty on {}:{}", hostname, port);
+        URI baseUri = UriBuilder.fromUri("http://" + hostname).port(port).build();
         ResourceConfig config = new TaskRooResourceConfig();
         server = JettyHttpContainerFactory.createServer(baseUri, config);
         try {
