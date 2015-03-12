@@ -3,4 +3,4 @@ script:
   - mvn test
   - mvn verify
 services:
-  - mongodb:2.6
+  - mongo:2.6
