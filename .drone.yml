@@ -1,0 +1,6 @@
+image: java:8
+script:
+  - mvn test
+  - mvn verify
+services:
+  - mongodb
