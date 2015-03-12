@@ -1,9 +1,11 @@
 package com.taskroo.data;
 
 import com.mongodb.*;
-import org.springframework.stereotype.Repository;
 import com.taskroo.domain.Role;
 import com.taskroo.service.security.SecurityToken;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.springframework.stereotype.Repository;
 
 import javax.inject.Inject;
 import java.util.Date;
@@ -12,6 +14,8 @@ import java.util.Set;
 
 @Repository
 public class SecurityTokenDao {
+
+    private static final Logger LOGGER = LogManager.getLogger();
 
     private DBCollection securityTokensCollection;
 
@@ -25,6 +29,7 @@ public class SecurityTokenDao {
                 null, false, new BasicDBObject("$set", new BasicDBObject("last_accessed_time", new Date())), true, false);
 
         if (secTokenDbObject == null) {
+            LOGGER.debug("Security token not found.");
             return null;
         }
         return mapDbObjectToSecurityToken(secTokenDbObject);

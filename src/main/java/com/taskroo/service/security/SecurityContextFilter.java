@@ -3,6 +3,8 @@ package com.taskroo.service.security;
 import com.taskroo.data.SecurityTokenDao;
 import com.taskroo.domain.Role;
 import com.taskroo.domain.User;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.annotation.Priority;
 import javax.inject.Inject;
@@ -21,6 +23,8 @@ import java.util.Set;
 @Provider
 public class SecurityContextFilter implements ContainerRequestFilter {
 
+    private static final Logger LOGGER = LogManager.getLogger();
+
     private final SecurityTokenDao securityTokenDao;
     private String authenticationServiceUrl;
 
@@ -36,6 +40,7 @@ public class SecurityContextFilter implements ContainerRequestFilter {
 
         String authorizationHeader = requestContext.getHeaderString("Authorization");
         if (authorizationHeader == null) {
+            LOGGER.debug("No Authorization header found. User is not authenticated.");
             requestContext.setSecurityContext(new TaskRooSecurityContext(null, null, authenticationServiceUrl));
             return;
         }
@@ -47,9 +52,11 @@ public class SecurityContextFilter implements ContainerRequestFilter {
         SecurityToken securityToken = null;
 
         if (tokenKey != null && !tokenKey.isEmpty()) {
+            LOGGER.debug("Security TokenKey found - checking if TokenKey is correct...");
             securityToken = securityTokenDao.findOneAndUpdateLastAccessedTime(tokenKey);
 
             if (null != securityToken) {
+                LOGGER.debug("User authenticated correctly.");
                 Set<Role> roles = new HashSet<>();
                 roles.add(Role.USER);
                 user = new User(securityToken.getUserId(), roles);
