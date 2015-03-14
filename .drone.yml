@@ -1,7 +1,7 @@
 image: java:8-jdk
 script:
   - apt-get update
-  - apt-get install maven
+  - apt-get install -y maven
   - mvn install
 services:
   - library/mongo:2.6
