@@ -3,5 +3,5 @@ script:
   - mvn test
   - mvn verify
 services:
-  - mongo:2.6
+  - library/mongo:2.6
 
