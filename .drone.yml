@@ -1,6 +1,5 @@
 image: maven:3-jdk-8-onbuild
 script:
-  - mvn install -q -DskipTests=true
-  - mvn test
+  - echo "hello maven"
 services:
   - library/mongo:2.6
