@@ -1,5 +1,6 @@
 image: java:8-jdk
 script:
+  - apt-get update
   - apt-get install maven
   - mvn install
 services:
