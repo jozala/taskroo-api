@@ -1,5 +1,6 @@
 image: java:8-jdk
 script:
+  - sudo apt-get install maven
   - mvn install
 services:
   - library/mongo:2.6
