@@ -4,3 +4,4 @@ script:
   - mvn verify
 services:
   - mongo:2.6
+
