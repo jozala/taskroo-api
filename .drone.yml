@@ -1,5 +1,5 @@
 image: maven:3-jdk-8
 script:
-  - mvn install
+  - mvn install -DargLine="-DMONGO_PORT_27017_TCP_PORT=$MONGO_PORT_27017_TCP_PORT -DMONGO_PORT_27017_TCP_ADDR=$MONGO_PORT_27017_TCP_ADDR"
 services:
   - neoxia/mongodb:2.6
