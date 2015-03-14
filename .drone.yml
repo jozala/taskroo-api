@@ -1,4 +1,4 @@
-image: maven:3-jdk-8-onbuild
+image: maven:3.2-jdk-8-onbuild
 script:
   - echo "hello maven"
 services:
