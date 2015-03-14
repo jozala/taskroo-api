@@ -1,5 +1,6 @@
 image: maven:3-jdk-8
 script:
-  - mvn install
+  - mvn install -DskipTests
 services:
   - library/mongo:3.0
+
