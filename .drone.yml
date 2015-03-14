@@ -1,7 +1,6 @@
-image: java:8
+image: maven:3-jdk-onbuild
 script:
-  - mvn test
-  - mvn verify
+  - mvn install
 services:
   - library/mongo:2.6
 
