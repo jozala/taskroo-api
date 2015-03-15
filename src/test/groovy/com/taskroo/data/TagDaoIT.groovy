@@ -5,7 +5,7 @@ import org.bson.types.ObjectId
 import com.taskroo.domain.Tag
 import com.taskroo.domain.Task
 
-class TagDaoTest extends DaoTestBase {
+class TagDaoIT extends DaoTestBase {
 
     TagDao tagDao
     TaskDao taskDao

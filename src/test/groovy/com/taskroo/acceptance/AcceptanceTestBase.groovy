@@ -11,7 +11,9 @@ import spock.lang.Specification
 abstract class AcceptanceTestBase extends Specification {
 
     static RESTClient client = new RESTClient('http://localhost:8080/')
-    private static final DB db = new MongoConnector('localhost', '27017').getDatabase('taskroo')
+    private static final DB db = new MongoConnector(System.properties.getProperty('MONGO_PORT_27017_TCP_ADDR', 'localhost'),
+            System.properties.getProperty('MONGO_PORT_27017_TCP_PORT', '27017'))
+            .getDatabase('taskroo')
     public static final DBCollection tagsCollection = db.getCollection('tags')
     public static final DBCollection tasksCollection = db.getCollection('tasks')
     public static final DBCollection securityTokensCollection = db.getCollection("securityTokens")

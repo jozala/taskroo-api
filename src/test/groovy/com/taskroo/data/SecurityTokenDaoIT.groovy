@@ -5,7 +5,7 @@ import org.bson.types.ObjectId
 import org.joda.time.DateTime
 import com.taskroo.domain.Role
 
-class SecurityTokenDaoTest extends DaoTestBase {
+class SecurityTokenDaoIT extends DaoTestBase {
 
     SecurityTokenDao securityTokenDao
 

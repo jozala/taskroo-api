@@ -4,4 +4,4 @@ cache:
 script:
   - mvn install -DargLine="-DMONGO_PORT_27017_TCP_PORT=$MONGO_PORT_27017_TCP_PORT -DMONGO_PORT_27017_TCP_ADDR=$MONGO_PORT_27017_TCP_ADDR"
 services:
-  - maniekq/mongodb:2.6
+  - maniekq/mongo:2.6

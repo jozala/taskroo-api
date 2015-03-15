@@ -8,7 +8,7 @@ import org.joda.time.DateTime
 import com.taskroo.domain.Tag
 import com.taskroo.domain.Task
 
-class TaskDaoTest extends DaoTestBase {
+class TaskDaoIT extends DaoTestBase {
 
     TaskDao taskDao
     TagDao tagDao
