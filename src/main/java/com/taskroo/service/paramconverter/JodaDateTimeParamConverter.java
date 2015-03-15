@@ -1,6 +1,8 @@
 package com.taskroo.service.paramconverter;
 
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
+import org.joda.time.format.ISODateTimeFormat;
 
 import javax.ws.rs.ext.ParamConverter;
 import javax.ws.rs.ext.ParamConverterProvider;
@@ -13,12 +15,12 @@ public class JodaDateTimeParamConverter implements ParamConverter<DateTime>, Par
 
     @Override
     public DateTime fromString(String value) {
-        return DateTime.parse(value);
+        return DateTime.parse(value, ISODateTimeFormat.dateTimeParser().withZoneUTC());
     }
 
     @Override
     public String toString(DateTime value) {
-        return value.toString();
+        return value.withZone(DateTimeZone.UTC).toString();
     }
 
     @Override
