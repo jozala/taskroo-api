@@ -11,4 +11,4 @@ services:
 notify:  
   email:
     recipients:
-      - {{mariusz.email}}
+      - {{emailMariusz}}
