@@ -5,6 +5,7 @@ script:
   - mkdir ~/.taskroo
   - cp src/main/resources/local.properties ~/.taskroo/.
   - mvn -Pdeploy -DargLine="-DMONGO_PORT_27017_TCP_PORT=$MONGO_PORT_27017_TCP_PORT -DMONGO_PORT_27017_TCP_ADDR=$MONGO_PORT_27017_TCP_ADDR"
+  - curl -s https://get.docker.io/ubuntu/ | sudo sh
   - docker push taskroo/taskroo-api
 services:
   - maniekq/mongo:2.6
