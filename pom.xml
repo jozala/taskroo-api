@@ -6,7 +6,7 @@
     <groupId>com.taskroo</groupId>
     <artifactId>taskroo-api</artifactId>
     <packaging>war</packaging>
-    <version>0.6.0-42401bb7a43c51514dc5a7f8c5f024b3f1d816a7</version>
+    <version>0.6.0-SNAPSHOT</version>
     <name>taskroo-api</name>
 
     <scm>
@@ -99,6 +99,11 @@
                         <goals>
                             <goal>integration-test</goal>
                         </goals>
+                        <configuration>
+                            <includes>
+                                <include>**/*IT.java</include>
+                            </includes>
+                        </configuration>
                     </execution>
                     <execution>
                         <id>verify</id>
@@ -206,8 +211,7 @@
                         <artifactId>docker-maven-plugin</artifactId>
                         <version>0.2.2</version>
                         <configuration>
-                            <imageName>taskroo/${project.name}:${project.version}</imageName>
-                            <tag></tag>
+                            <imageName>taskroo/${project.name}</imageName>
                             <dockerDirectory>docker</dockerDirectory>
                             <resources>
                                 <resource>
