@@ -4,9 +4,8 @@ cache:
 script:
   - mkdir ~/.taskroo
   - cp src/main/resources/local.properties ~/.taskroo/.
-  - apt-get update
-  - apt-get install -y apparmor
-  - curl -s https://get.docker.io/ubuntu/ | sh
+  - sudo apt-get update && sudo apt-get install wget
+  - wget -qO- https://get.docker.com/ | sh
   - wget https://raw.githubusercontent.com/jpetazzo/dind/master/wrapdocker
   - mv wrapdocker /usr/local/bin/wrapdocker
   - chmod +x /usr/local/bin/wrapdocker
