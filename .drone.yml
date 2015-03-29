@@ -2,10 +2,10 @@ image: maven:3-jdk-8
 cache:
   - /root/.m2/repository
 script:
+  - set -e
   - mkdir ~/.taskroo
   - cp src/main/resources/local.properties ~/.taskroo/.
-  - sudo apt-get update && sudo apt-get install wget
-  - wget -qO- https://get.docker.com/ | sh
+#  - wget -qO- https://get.docker.com/ | sh
   - wget https://raw.githubusercontent.com/jpetazzo/dind/master/wrapdocker
   - mv wrapdocker /usr/local/bin/wrapdocker
   - chmod +x /usr/local/bin/wrapdocker
