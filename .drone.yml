@@ -1,12 +1,19 @@
 image: taskroo/taskroo-dev
 cache:
   - /root/.m2/repository
+env:
+  - DOCKER_LOGIN=$$dockerHubLogin
+  - DOCKER_PASSWORD={{dockerHubPassword}}
 script:
+  - echo $DOCKER_LOGIN
+  - echo $DOCKER_PASSWORD
   - set -e
   - mkdir ~/.taskroo
+  - wrapdocker &
   - cp src/main/resources/local.properties ~/.taskroo/.
-  - mvn -Pdeploy -DargLine="-DMONGO_PORT_27017_TCP_PORT=$MONGO_PORT_27017_TCP_PORT -DMONGO_PORT_27017_TCP_ADDR=$MONGO_PORT_27017_TCP_ADDR"
-  - docker login -u $$dockerHubLogin -p $$dockerHubPassword -e $$emailMariusz
+  - mvn -Pdeploy -DargLine="-DMONGO_PORT_27017_TCP_PORT=$MONGO_PORT_27017_TCP_PORT -DMONGO_PORT_27017_TCP_ADDR=$MONGO_PORT_27017_TCP_ADDR" -DskipTests
+  - start-stop-daemon --stop --pidfile "/var/run/docker.pid"
+  - docker login -u $dockerHubLogin -p $dockerHubPassword -e $emailMariusz
   - docker push taskroo/taskroo-api
 services:
   - maniekq/mongo:2.6
