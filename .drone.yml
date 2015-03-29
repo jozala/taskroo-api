@@ -11,9 +11,9 @@ script:
   - wrapdocker &
   - cp src/main/resources/local.properties ~/.taskroo/.
   - mvn -Pdeploy -DargLine="-DMONGO_PORT_27017_TCP_PORT=$MONGO_PORT_27017_TCP_PORT -DMONGO_PORT_27017_TCP_ADDR=$MONGO_PORT_27017_TCP_ADDR" -DskipTests
-  - start-stop-daemon --stop --pidfile "/var/run/docker.pid"
   - docker login -u $DOCKER_LOGIN -p $DOCKER_PASSWORD -e $DOCKER_EMAIL
   - docker push taskroo/taskroo-api
+  - start-stop-daemon --stop --pidfile "/var/run/docker.pid"
 services:
   - maniekq/mongo:2.6
 notify:  
