@@ -1,4 +1,4 @@
-image: taskroo-dev
+image: taskroo/taskroo-dev
 cache:
   - /root/.m2/repository
 script:
