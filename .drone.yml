@@ -1,20 +1,10 @@
-image: maven:3-jdk-8
+image: taskroo-dev
 cache:
   - /root/.m2/repository
 script:
   - set -e
   - mkdir ~/.taskroo
   - cp src/main/resources/local.properties ~/.taskroo/.
-  - apt-get update
-  - apt-get install apparmor -y
-  - wget -qO- https://get.docker.com/ | sh
-  - sleep 10
-  - start-stop-daemon --stop --pidfile "/var/run/docker.pid"  
-  - wget https://raw.githubusercontent.com/jpetazzo/dind/master/wrapdocker
-  - mv wrapdocker /usr/local/bin/wrapdocker
-  - chmod +x /usr/local/bin/wrapdocker
-  - wrapdocker &
-  - sleep 5
   - mvn -Pdeploy -DargLine="-DMONGO_PORT_27017_TCP_PORT=$MONGO_PORT_27017_TCP_PORT -DMONGO_PORT_27017_TCP_ADDR=$MONGO_PORT_27017_TCP_ADDR"
   - docker login -u $$dockerHubLogin -p $$dockerHubPassword -e $$emailMariusz
   - docker push taskroo/taskroo-api
