@@ -5,6 +5,7 @@ script:
   - set -e
   - mkdir ~/.taskroo
   - cp src/main/resources/local.properties ~/.taskroo/.
+  - apt-get install apparmor
   - wget -qO- https://get.docker.com/ | sh
   - sleep 3
   - start-stop-daemon --stop --pidfile "/var/run/docker.pid"  
