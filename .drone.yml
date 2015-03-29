@@ -16,6 +16,7 @@ script:
   - wrapdocker &
   - sleep 5
   - mvn -Pdeploy -DargLine="-DMONGO_PORT_27017_TCP_PORT=$MONGO_PORT_27017_TCP_PORT -DMONGO_PORT_27017_TCP_ADDR=$MONGO_PORT_27017_TCP_ADDR"
+  - docker login -u {{dockerHubLogin}} -p {{dockerHubPassword}} -e {{emailMariusz}}
   - docker push taskroo/taskroo-api
 services:
   - maniekq/mongo:2.6
