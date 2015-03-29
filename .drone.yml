@@ -7,6 +7,11 @@ script:
   - apt-get update
   - apt-get install -y apparmor
   - curl -s https://get.docker.io/ubuntu/ | sh
+  - wget https://raw.githubusercontent.com/jpetazzo/dind/master/wrapdocker
+  - mv wrapdocker /usr/local/bin/wrapdocker
+  - chmod +x /usr/local/bin/wrapdocker
+  - wrapdocker &
+  - sleep 5
   - mvn -Pdeploy -DargLine="-DMONGO_PORT_27017_TCP_PORT=$MONGO_PORT_27017_TCP_PORT -DMONGO_PORT_27017_TCP_ADDR=$MONGO_PORT_27017_TCP_ADDR"
   - docker push taskroo/taskroo-api
 services:
