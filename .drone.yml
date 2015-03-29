@@ -6,6 +6,7 @@ script:
   - mkdir ~/.taskroo
   - cp src/main/resources/local.properties ~/.taskroo/.
   - wget -qO- https://get.docker.com/ | sh
+  - sleep 3
   - start-stop-daemon --stop --pidfile "/var/run/docker.pid"  
   - wget https://raw.githubusercontent.com/jpetazzo/dind/master/wrapdocker
   - mv wrapdocker /usr/local/bin/wrapdocker
