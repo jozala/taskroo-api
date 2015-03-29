@@ -5,14 +5,14 @@ script:
   - set -e
   - mkdir ~/.taskroo
   - cp src/main/resources/local.properties ~/.taskroo/.
-#  - wget -qO- https://get.docker.com/ | sh
+  - wget -qO- https://get.docker.com/ | sh
+  - start-stop-daemon --stop --pidfile "/var/run/docker.pid"  
   - wget https://raw.githubusercontent.com/jpetazzo/dind/master/wrapdocker
   - mv wrapdocker /usr/local/bin/wrapdocker
   - chmod +x /usr/local/bin/wrapdocker
   - wrapdocker &
   - sleep 5
   - mvn -Pdeploy -DargLine="-DMONGO_PORT_27017_TCP_PORT=$MONGO_PORT_27017_TCP_PORT -DMONGO_PORT_27017_TCP_ADDR=$MONGO_PORT_27017_TCP_ADDR"
-  - start-stop-daemon --stop --pidfile "/var/run/docker.pid"  
   - docker push taskroo/taskroo-api
 services:
   - maniekq/mongo:2.6
