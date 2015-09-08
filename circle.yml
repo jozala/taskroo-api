@@ -22,3 +22,7 @@ deployment:
       - mvn -Pdeploy
       - docker login -u $DOCKER_HUB_LOGIN -p $DOCKER_HUB_PASSWORD -e $DOCKER_EMAIL
       - docker push taskroo/taskroo-api
+  production:
+    branch: master
+    commands:
+      - ssh admin@taskroo.com '/home/admin/taskroo/scripts/redeploy.sh'
