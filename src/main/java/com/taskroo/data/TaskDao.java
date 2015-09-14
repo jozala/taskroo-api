@@ -342,4 +342,19 @@ public class TaskDao {
 
         return dbTasksConverter.convertToFlatTasksList(dbTasks.toArray(), allUserTags);
     }
+
+    public Collection<Task> findFinished(String ownerId, int offset, int limit) {
+        DBObject queryByOwnerAndFinished = QueryBuilder
+                .start(OWNER_ID_KEY).is(ownerId)
+                .and(FINISHED_KEY).is(true)
+                .get();
+
+        DBCursor dbTasks = tasksCollection.find(queryByOwnerAndFinished)
+                .skip(offset)
+                .limit(limit)
+                .sort(new BasicDBObject(CLOSED_DATE_KEY, -1));
+
+        List<Tag> allUserTags = tagDao.getAllTagsByOwnerId(ownerId);
+        return dbTasksConverter.convertToFlatTasksList(dbTasks.toArray(), allUserTags);
+    }
 }

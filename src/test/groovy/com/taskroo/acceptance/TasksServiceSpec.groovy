@@ -658,4 +658,23 @@ class TasksServiceSpec extends AcceptanceTestBase {
         response.data.size() == 2
         response.data*.closedDate.containsAll(new DateTime(2015, 1, 20, 0, 0, DateTimeZone.UTC).millis, new DateTime(2015, 1, 30, 0, 0, DateTimeZone.UTC).millis)
     }
+
+    def "should return 2 newest finished tasks with offset of 3"() {
+        given: "user A is authenticated"
+        def userASecurityId = createSecurityTokenWithUser(TEST_USER_ID)
+        and: "user has 6 tasks finished with different closed dates"
+        def days = (0..5).collect {DateTime.now().minusDays(it)}
+        days.eachWithIndex { DateTime day, int index ->
+            client.post(path: 'tasks', body: "{\"title\": \"task finished on day -$index\", \"finished\": true, \"closedDate\": ${day.millis}}",
+                    requestContentType: ContentType.JSON,
+                    headers: ['Authorization': generateAuthorizationHeader(userASecurityId)])
+        }
+        when:
+        def response = client.get([path: 'tasks', query: [finished: true, limit: 2, offset: 3],
+                                   headers: ['Authorization': generateAuthorizationHeader(userASecurityId)]])
+        then:
+        response.data*.title == ['task finished on day -3', 'task finished on day -4']
+
+
+    }
 }

@@ -48,10 +48,14 @@ public class TasksService {
             @ApiResponse(code = 403, message = "Access forbidden")})
     public Response getAll(@Context SecurityContext sc,
                            @ApiParam(value = "Specify if you want to filter by finished") @QueryParam("finished") Boolean finished,
-                           @QueryParam("closedDateAfter") DateTime closedDateAfter, @QueryParam("closedDateBefore") DateTime closedDateBefore) {
+                           @QueryParam("closedDateAfter") DateTime closedDateAfter, @QueryParam("closedDateBefore") DateTime closedDateBefore,
+                           @QueryParam("offset") Integer offset, @QueryParam("limit") Integer limit) {
         Collection<Task> tasks;
         String ownerId = sc.getUserPrincipal().getName();
-        if (finished == null) {
+
+        if (finished != null && finished && offset != null && limit != null) {
+            tasks = taskDao.findFinished(ownerId, offset, limit);
+        } else if (finished == null) {
             tasks = taskDao.findAllByOwnerId(ownerId);
         } else if (!finished) {
             tasks = taskDao.findUnfinishedByOwnerId(ownerId);

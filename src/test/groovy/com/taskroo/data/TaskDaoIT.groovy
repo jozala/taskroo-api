@@ -738,4 +738,22 @@ class TaskDaoIT extends DaoTestBase {
         then: "finished tasks should be returned ordered by closed date descending"
         tasks.collect {it.title} == ['newest', 'middle', 'oldest']
     }
+
+    def "should fetch 2 tasks from DB with offset of 3 and order by closed date"() {
+        given: "customer has six finished tasks"
+        def tasks = (0..5).collect {
+            new Task.TaskBuilder().setOwnerId('mariusz')
+                    .setTitle("task finished on day -$it")
+                    .setCreatedDate(new Date())
+                    .setFinished(true)
+                    .setClosedDate(DateTime.now().minusDays(20).minusDays(it).toDate())
+                    .build()
+        }
+        tasks.each { taskDao.insert(it) }
+        when: 'specifying to find only 2 finished tasks with offset 3'
+        def fetchedTasks = taskDao.findFinished('mariusz', 3, 2)
+        then: 'finished tasks should be returned ordered by closed date descending'
+        fetchedTasks*.title == ['task finished on day -3', 'task finished on day -4']
+
+    }
 }
